@@ -5,6 +5,38 @@ first, and retain previous entries as project history.
 
 ## Unreleased
 
+### 2026-11-14 - Builder profile persistence
+
+#### Added
+- Added framework-independent builder identity/profile models, an application repository contract,
+  and a read-only active-status use case. Profile lookup never creates or reactivates accounts.
+- Added an async MongoDB repository with exact issuer/subject identity, deterministic profile
+  ObjectIds, majority writes, uncached primary linearizable reads, and fail-closed index/data checks.
+- Added an explicit, idempotent unique-index migration; no index is created at application startup.
+- Added offline domain/adapter tests and a separately opt-in Atlas profile integration test.
+
+#### Verification
+- Provisioned and verified the `builder_profiles` collection and unique identity index on the
+  configured `platform_db`; repeating the migration succeeded. No real builder profile was created.
+- The opt-in Atlas test passed for index enforcement, concurrent duplicates, issuer isolation,
+  majority disable followed by a denied lookup, and malformed-status rejection. Synthetic profiles
+  were removed; the empty scratch collection and index were retained.
+- The default suite passed 232 tests with two live tests skipped. Ruff lint/format, mypy on `src`
+  and `tests`, and `uv lock --check` passed.
+- Supabase login, sessions, actual Compass edits, protected HTTP requests, Atlas failover, and Vercel
+  deployment remain unverified. The existing sample collection was not accessed.
+
+### 2026-11-14 - Verify Supabase project configuration
+
+#### Verification
+- A read-only Supabase Auth settings request accepted the configured publishable key; the same
+  request with an invalid control key returned HTTP 401. No keys, project URLs, or raw responses
+  were recorded.
+- Email sign-up was enabled and email auto-confirm was disabled. The public JWKS advertised an
+  ES256 key, but the active user-token signing key was not established by this check.
+- No account was created or authenticated. Email delivery, application auth integration, and
+  Vercel/browser session behavior remain unverified.
+
 ### 2026-11-14 - Verify platform database access
 
 #### Added

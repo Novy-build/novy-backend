@@ -9,12 +9,15 @@
 ## 1. Starting Point
 
 This repository now contains an initial FastAPI application, dependency lockfile, liveness route,
-validated settings, a lifespan-managed MongoDB client, and focused tests. An isolated local Atlas
-probe verified specific `platform_db` reads, writes, index enforcement, transaction commit, and
-observed rollback. Application-level persistence and failure modes remain unverified. The repository
-does not yet contain MongoDB repositories or migrations, Supabase integration, project or
-authentication APIs, hosted runtime, CI, or a verified Vercel deployment. The liveness route checks
-only the API process. The sibling frontend's clients, DTOs, local repositories, tests, and
+validated settings, a lifespan-managed MongoDB client, and focused tests. The internal builder-profile
+repository and its explicit identity-index migration are implemented and were exercised in an
+isolated Atlas scratch collection; `platform_db.builder_profiles` and its index were provisioned.
+The configured collection had no real profiles when checked. An earlier Atlas probe verified
+specific reads, writes, index enforcement, transaction commit, and observed rollback. Broader
+application persistence and failure modes remain unverified. The repository does not yet contain
+project repositories, Supabase integration, project or authentication APIs, hosted runtime, CI,
+or a verified Vercel deployment. The liveness route checks only the API process. The sibling
+frontend's clients, DTOs, local repositories, tests, and
 simulations are integration evidence, not evidence of a working backend integration. See
 `PROGRESS.md` for the current implementation inventory.
 
@@ -555,9 +558,10 @@ snapshot and policy scope and have tested invalidation.
 
 ## 11. Phased Delivery and Acceptance
 
-Phase 1 has begun with the FastAPI foundation, but its database, CI, and deployment gates are not
-complete. The remaining phases are not complete. A phase is accepted only when its dependencies and
-stated checks pass; cross-repository changes require separate authorization.
+Phase 1 has begun with the FastAPI and MongoDB foundation, and Phase 2 has begun with internal
+builder-profile persistence. Their remaining verification, CI, deployment, and authentication gates
+are not complete. A phase is accepted only when its dependencies and stated checks pass;
+cross-repository changes require separate authorization.
 
 ### Phase 0: Contract and capability baseline
 
