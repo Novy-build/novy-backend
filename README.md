@@ -1,1 +1,79 @@
-# novy-backend
+# Novy Backend
+
+Novy Backend is the API and persistence service being built for the Novy web application builder.
+It uses FastAPI and Clean Architecture, with MongoDB Atlas, Supabase Auth, and Vercel planned for
+later integration.
+
+The first release is a hosted prototype with project-scoped preview data. Downloadable source
+export, external deployments, and production AI, RAG, and biometric processing are deferred.
+
+## Current Status
+
+The current implementation is a FastAPI foundation with one liveness endpoint. Authentication,
+MongoDB persistence, project APIs, hosted prototypes, and deployment are not implemented or verified.
+Do not treat the frontend's API clients or older handoff documents as evidence of a working backend.
+
+## Local Development
+
+The project targets Python 3.12 and uses a locked dependency set managed by
+[uv](https://docs.astral.sh/uv/getting-started/installation/). Install uv, then run:
+
+```powershell
+uv sync --locked --group dev
+uv run --locked --group dev uvicorn novy.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+An existing Windows virtual environment can also run the server directly:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn novy.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+This workspace's virtual environment uses a local Python installation under `.tools/python`.
+Both `.tools/` and `.venv/` are ignored by Git; if the Python installation is removed, the virtual
+environment must be recreated with a suitable Python 3.12 installation.
+
+The optional `NOVY_ENVIRONMENT` setting can be set through the process environment or a local
+`.env` file. Values are `development`, `test`, and `production`; the default is `production`.
+The local `.env.example` shows the development value, and this workspace has an ignored development
+`.env`. Environment variables take precedence over the file. Unknown dotenv entries and invalid
+values fail validation. The interactive documentation at `/docs` and schema at `/openapi.json`
+are available only in development or test. Debug mode is always off. Hiding documentation is not
+an authentication or authorization control.
+
+`GET /api/v1/health/live` returns `{"status":"alive"}` with `Cache-Control: no-store`. It checks
+only that the API can respond; it does not check MongoDB, Supabase, or deployment readiness. There
+is no readiness endpoint yet.
+
+## Verification
+
+```powershell
+uv run --locked --group dev pytest
+uv run --locked --group dev ruff check .
+uv run --locked --group dev ruff format --check .
+uv run --locked --group dev mypy src tests
+uv lock --check
+```
+
+These checks exercise the local scaffold. They do not verify Vercel's runtime or rewrite, MongoDB
+transactions, or Supabase integration. The development dependency group is explicit so it is not
+installed by a default production sync.
+
+## Architecture
+
+- `src/novy/domain/`: framework-independent models and rules as they are added.
+- `src/novy/application/`: use cases and external dependency interfaces as they are added.
+- `src/novy/infrastructure/`: validated settings and future provider/database adapters.
+- `src/novy/presentation/http/`: FastAPI routes and transport models.
+- `src/novy/main.py`: application composition; `src/main.py` re-exports the app for Vercel.
+
+MongoDB and Supabase clients are intentionally not stubbed. Add actual adapters and manage shared
+clients through FastAPI lifespan when their first use cases are implemented.
+
+## Documentation
+
+- [Backend engineering rules](AGENTS.md)
+- [Current backend progress](PROGRESS.md)
+- [Backend architecture and delivery plan](BACKEND_PLAN.md)
+- [Changelog](CHANGELOGS.md)
+- [Historical handoff archive](docs/frontend-handoff/README.md)
