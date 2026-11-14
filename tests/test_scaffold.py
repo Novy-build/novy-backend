@@ -18,7 +18,7 @@ def isolated_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Non
     monkeypatch.chdir(tmp_path)
     monkeypatch.syspath_prepend(str(PROJECT_ROOT))
     for name in tuple(os.environ):
-        if name.upper().startswith(("NOVY_", "MONGO", "SUPABASE")):
+        if name.upper().startswith(("NOVY_", "MONGO", "SUPABASE", "NEXT_PUBLIC_SUPABASE_")):
             monkeypatch.delenv(name, raising=False)
 
 

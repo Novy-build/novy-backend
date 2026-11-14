@@ -9,11 +9,14 @@
 ## 1. Starting Point
 
 This repository now contains an initial FastAPI application, dependency lockfile, liveness route,
-validated settings, and focused scaffold tests. It does not yet contain database adapters or
-migrations, provider integrations, project or authentication APIs, hosted runtime, CI, or a
-verified Vercel deployment. The liveness route checks only the API process. The sibling frontend's
-clients, DTOs, local repositories, tests, and simulations are integration evidence, not evidence of
-a working backend integration. See `PROGRESS.md` for the current implementation inventory.
+validated settings, a lifespan-managed MongoDB client, and focused tests. An isolated local Atlas
+probe verified specific `platform_db` reads, writes, index enforcement, transaction commit, and
+observed rollback. Application-level persistence and failure modes remain unverified. The repository
+does not yet contain MongoDB repositories or migrations, Supabase integration, project or
+authentication APIs, hosted runtime, CI, or a verified Vercel deployment. The liveness route checks
+only the API process. The sibling frontend's clients, DTOs, local repositories, tests, and
+simulations are integration evidence, not evidence of a working backend integration. See
+`PROGRESS.md` for the current implementation inventory.
 
 The product baseline is [PD6_A-04.pdf](../novy-web/project_information/PD6_A-04.pdf). Explicit
 newer product-owner decisions in this plan override conflicting parts of that document. In

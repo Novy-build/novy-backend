@@ -1,17 +1,19 @@
 # Novy Backend
 
 Novy Backend is the API and persistence service being built for the Novy web application builder.
-It uses FastAPI and Clean Architecture, with MongoDB Atlas, Supabase Auth, and Vercel planned for
-later integration.
+It uses FastAPI, PyMongo Async, and Clean Architecture, with Supabase Auth and Vercel integration
+planned for later work.
 
 The first release is a hosted prototype with project-scoped preview data. Downloadable source
 export, external deployments, and production AI, RAG, and biometric processing are deferred.
 
 ## Current Status
 
-The current implementation is a FastAPI foundation with one liveness endpoint. Authentication,
-MongoDB persistence, project APIs, hosted prototypes, and deployment are not implemented or verified.
-Do not treat the frontend's API clients or older handoff documents as evidence of a working backend.
+The current implementation includes a FastAPI foundation, one liveness endpoint, and a
+lifespan-managed MongoDB client. An isolated local Atlas test verified `platform_db` reads, writes,
+unique-index enforcement, transaction commit, and observed rollback. Authentication, project
+persistence APIs, hosted prototypes, and deployment are not implemented. Do not treat the
+frontend's API clients or older handoff documents as evidence of a working backend.
 
 ## Local Development
 
@@ -41,6 +43,18 @@ values fail validation. The interactive documentation at `/docs` and schema at `
 are available only in development or test. Debug mode is always off. Hiding documentation is not
 an authentication or authorization control.
 
+`MONGODB_CONNECTION_STRING` is read from the process environment or local `.env`. The URI is treated
+as a secret, and the client selects `platform_db` using TLS with certificate and hostname validation.
+Explicit insecure TLS options, unescaped `#`, and semicolon-separated query options are rejected.
+Credentials must not be placed in tracked files, logs, or public responses. The existing
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` dotenv entries are accepted but
+are not used for authentication yet.
+
+When the MongoDB connection string is absent, the process can run the liveness-only scaffold without
+a database client. A present but invalid connection string fails configuration validation. Creating
+a client does not prove server connectivity or database permissions; no project data is read or
+written by the current implementation.
+
 `GET /api/v1/health/live` returns `{"status":"alive"}` with `Cache-Control: no-store`. It checks
 only that the API can respond; it does not check MongoDB, Supabase, or deployment readiness. There
 is no readiness endpoint yet.
@@ -55,9 +69,21 @@ uv run --locked --group dev mypy src tests
 uv lock --check
 ```
 
-These checks exercise the local scaffold. They do not verify Vercel's runtime or rewrite, MongoDB
-transactions, or Supabase integration. The development dependency group is explicit so it is not
-installed by a default production sync.
+The default suite skips the live Atlas verification. To run it explicitly against a confirmed test
+deployment, use:
+
+```powershell
+uv run --locked --group dev python -W ignore -m pytest -q -s --tb=no tests/integration/test_platform_db.py::test_platform_db_live --verify-platform-db
+```
+
+This is a write test. Each run creates a uniquely named scratch collection, validator, and index in
+the configured `platform_db`. It deletes only exact synthetic test records and intentionally leaves
+the empty collection and index in place. A failure or interruption can leave synthetic records for
+investigation. Never run it against an unapproved production database.
+
+These checks do not verify Vercel's runtime or rewrite, Supabase integration, or every MongoDB
+permission and failure mode. The development dependency group is explicit so it is not installed
+by a default production sync.
 
 ## Architecture
 
@@ -67,8 +93,8 @@ installed by a default production sync.
 - `src/novy/presentation/http/`: FastAPI routes and transport models.
 - `src/novy/main.py`: application composition; `src/main.py` re-exports the app for Vercel.
 
-MongoDB and Supabase clients are intentionally not stubbed. Add actual adapters and manage shared
-clients through FastAPI lifespan when their first use cases are implemented.
+The MongoDB client is created and closed through FastAPI lifespan. Project repositories and the
+Supabase authentication adapter remain to be implemented.
 
 ## Documentation
 

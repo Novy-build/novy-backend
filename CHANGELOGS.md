@@ -5,6 +5,37 @@ first, and retain previous entries as project history.
 
 ## Unreleased
 
+### 2026-11-14 - Verify platform database access
+
+#### Added
+- Added an explicitly opt-in Atlas integration test and offline safety tests. The live probe uses
+  a uniquely named scratch collection, checks its metadata, and deletes only exact synthetic records.
+
+#### Verification
+- The live probe passed against `platform_db`: collection creation, reads, inserts, updates,
+  deletes, unique-index enforcement, and a two-document transaction commit succeeded. Rollback was
+  observed through nonvisibility and ID reuse; the driver's abort acknowledgement was not established.
+- Synthetic records were removed. The empty scratch collection, validator, and index were retained
+  as requested; the existing sample collection was not accessed.
+- The default local suite passed 71 tests and skipped the opt-in live test. Ruff lint/format, mypy
+  on `src` and `tests`, and `uv lock --check` passed.
+
+### 2026-11-14 - MongoDB client foundation
+
+#### Added
+- Pinned PyMongo Async and added a lifespan-managed, bounded TLS client selecting `platform_db`.
+- Accepted the existing MongoDB and Supabase dotenv names without implementing Supabase auth;
+  added URI safety checks and secret-redaction coverage.
+- Added isolated tests for settings, secure client options, lifecycle cleanup, and liveness without
+  provider access. No project repositories, database writes, or public readiness endpoint were added.
+
+#### Verification
+- 61 local tests passed. Ruff lint/format, mypy on `src` and `tests`, and `uv lock --check` passed.
+- An initial Atlas ping failed with a TLS internal alert; subsequent TLS checks and three read-only
+  pings across fresh client lifecycles succeeded locally. The cause of the earlier failure is unknown.
+  Database-specific permissions, transactions, and Vercel behavior remain unverified. The existing
+  sample collection was not read or modified.
+
 ### 2026-11-14 - FastAPI foundation
 
 #### Added

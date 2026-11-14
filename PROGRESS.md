@@ -18,17 +18,25 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
   liveness route. The endpoint reports process liveness only.
 - [x] Python 3.12 package configuration and dependency lock, isolated local environment,
   pytest, Ruff, and mypy configuration with focused scaffold tests.
+- [x] Configured PyMongo Async client and `platform_db` selection within FastAPI lifespan, with
+  bounded connection settings, TLS validation, and credential-redaction tests.
+- [x] A local, read-only Atlas server ping succeeded across three fresh client lifecycles.
+- [x] An opt-in local Atlas test verified `platform_db` collection creation, read/write/delete,
+  unique-index enforcement, transaction commit, and observed rollback in an isolated scratch
+  collection. Synthetic records were removed; the scratch collection and index were retained.
 - [ ] Production API contracts, readiness checks, CI, and target-runtime deployment verification.
-- [ ] MongoDB repositories, indexes, migrations, transactions, backups, and live Atlas verification.
+- [ ] MongoDB repositories, application indexes and migrations, transaction failure and failover
+  coverage, database-specific authorization rules, and backups.
 - [ ] Supabase Auth integration, builder/app-user sessions, CSRF, and account status enforcement.
 - [ ] Project and data APIs, revision conflict handling, template provisioning, import, and duplicate.
 - [ ] Isolated preview data, strict preview validation, hosted runtime, and project access rules.
 - [ ] Verified Vercel deployment and same-origin routing through a real browser.
 
-The implementation currently covers the application foundation and liveness route only. The
-application does not connect to MongoDB or Supabase, expose authentication or project APIs, or host
-prototypes. Historical frontend documents describe integrations and verification in other contexts;
-those claims have not been verified against a backend implementation here.
+The implementation covers the application foundation and MongoDB client lifecycle. The isolated
+Atlas probe verified specific database operations, but no application-facing MongoDB data operations,
+Supabase integration, authentication or project APIs, or hosted prototypes are implemented.
+Historical frontend documents describe other contexts and are not evidence of working backend
+features here.
 
 ## Approved Direction
 
@@ -49,8 +57,16 @@ These are approved decisions and future work, not completed features.
 
 ## Verification
 
-- Local scaffold tests: 22 passed on Python 3.12.16.
+- Default local suite: 71 passed and one live integration test skipped on Python 3.12.16.
+- The explicitly enabled live `platform_db` integration test passed on the configured Atlas cluster.
+  It verified CRUD, unique-index enforcement, a committed two-document transaction, and rollback
+  visibility with ID reuse; the driver's abort acknowledgement was not established. Its synthetic
+  records were removed, and its empty scratch collection and index were intentionally retained.
 - Ruff lint and format checks, mypy on source and tests, and `uv lock --check` passed locally.
 - A local Uvicorn HTTP smoke test returned `200 {"status":"alive"}`.
-- Vercel deployment and rewrites, real MongoDB transactions/indexes, and live Supabase behavior
-  have not been verified. Docker was not available for a local MongoDB replica set.
+- An initial read-only Atlas ping failed with a TLS internal alert. Subsequent TLS checks and three
+  read-only pings across fresh client lifecycles succeeded locally; the earlier failure's cause is
+  unknown. The sample collection was not read or changed.
+- Vercel deployment and rewrites, real application-level transaction/index behavior and failure
+  modes, and live Supabase behavior have not been verified. Docker was not available for a local
+  MongoDB replica set.
