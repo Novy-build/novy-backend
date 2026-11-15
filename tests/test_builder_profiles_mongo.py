@@ -30,11 +30,11 @@ from novy.domain.builder import (
     BuilderProfileAlreadyExists,
     BuilderProfileDataError,
 )
+from novy.infrastructure.bson_document import StrictDocument as _StrictDocument
 from novy.infrastructure.builder_profiles import (
     BUILDER_IDENTITY_INDEX,
     MongoBuilderProfileRepository,
     _profile_id,
-    _StrictDocument,
 )
 from novy.infrastructure.migrations.builder_profiles_v1 import ensure_builder_profile_indexes
 

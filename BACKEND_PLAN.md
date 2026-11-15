@@ -2,17 +2,17 @@
 
 **Status:** Approved direction and planned work, not an implementation report.
 
-**Reviewed:** 2026-11-14
+**Reviewed:** 2026-11-15
 
 **Implementation inventory:** [PROGRESS.md](PROGRESS.md)
 
 ## 1. Starting Point
 
 This repository now contains an initial FastAPI application, dependency lockfile, liveness route,
-validated settings, a lifespan-managed MongoDB client, and focused tests. The internal builder-profile
-repository and its explicit identity-index migration are implemented and were exercised in an
-isolated Atlas scratch collection; `platform_db.builder_profiles` and its index were provisioned.
-The configured collection had no real profiles when checked. An earlier Atlas probe verified
+validated settings, a lifespan-managed MongoDB client, and focused tests. Internal builder-profile
+and builder-session components and their explicit index migrations are implemented and were
+exercised in isolated Atlas scratch collections; their platform collections and indexes were
+provisioned. No real profile or browser session has been issued. An earlier Atlas probe verified
 specific reads, writes, index enforcement, transaction commit, and observed rollback. Broader
 application persistence and failure modes remain unverified. The repository does not yet contain
 project repositories, Supabase integration, project or authentication APIs, hosted runtime, CI,
@@ -163,6 +163,11 @@ procedure. Sessions include realm, subject, creation/expiry/revocation, CSRF bin
 runtime, project and environment; never store passwords. Cookies are `Secure`, `HttpOnly`, host-only
 (no `Domain`), `Path=/`, with an appropriate `SameSite` setting; prefer the `__Host-` prefix where
 feasible. A separate readable host-only CSRF cookie is not the session cookie. Use TLS end to end.
+
+The approved builder-session policy is seven days of inactivity and a 30-day absolute maximum.
+The current internal `v1` implementation uses independent encryption and lookup keys. Replacing
+either key invalidates existing sessions; overlapping key rotation, nonce-volume monitoring,
+distributed provider refresh, and deployed browser verification remain release requirements.
 
 Validate provider JWTs using a maintained library and the realm's configured exact issuer, audience,
 allowed signing algorithm, signature, expiry, and subject; apply appropriate clock skew and reject

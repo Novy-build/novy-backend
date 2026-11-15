@@ -14,3 +14,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="Authorize builder profile verification in an isolated platform_db collection",
     )
+    parser.addoption(
+        "--verify-builder-sessions-db",
+        action="store_true",
+        default=False,
+        help="Authorize builder session verification in an isolated platform_db collection",
+    )

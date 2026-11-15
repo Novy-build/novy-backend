@@ -1,8 +1,29 @@
+import base64
+import binascii
+import hmac
+import re
 from typing import Any, Literal
 from urllib.parse import parse_qsl, urlsplit
 
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def decode_session_key(value: SecretStr) -> bytes:
+    encoded = value.get_secret_value()
+    decoded = None
+    if re.fullmatch(r"[A-Za-z0-9_-]{43}=", encoded, flags=re.ASCII):
+        try:
+            decoded = base64.b64decode(encoded, altchars=b"-_", validate=True)
+        except (ValueError, binascii.Error):
+            pass
+    if (
+        decoded is None
+        or len(decoded) != 32
+        or base64.urlsafe_b64encode(decoded).decode("ascii") != encoded
+    ):
+        raise ValueError("Invalid session key")
+    return decoded
 
 
 class Settings(BaseSettings):
@@ -29,6 +50,8 @@ class Settings(BaseSettings):
         repr=False,
         exclude=True,
     )
+    session_encryption_key: SecretStr | None = Field(default=None, repr=False, exclude=True)
+    session_lookup_key: SecretStr | None = Field(default=None, repr=False, exclude=True)
 
     @model_validator(mode="before")
     @classmethod
@@ -43,6 +66,10 @@ class Settings(BaseSettings):
                 "supabase_url",
                 "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
                 "supabase_publishable_key",
+                "NOVY_SESSION_ENCRYPTION_KEY",
+                "session_encryption_key",
+                "NOVY_SESSION_LOOKUP_KEY",
+                "session_lookup_key",
             ):
                 value = data.get(name)
                 if isinstance(value, str):
@@ -52,6 +79,37 @@ class Settings(BaseSettings):
                 elif value is not None and not isinstance(value, SecretStr):
                     data[name] = object()
         return data
+
+    @field_validator("session_encryption_key", "session_lookup_key")
+    @classmethod
+    def validate_session_key(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None:
+            decode_session_key(value)
+        return value
+
+    @model_validator(mode="after")
+    def validate_session_keys(self) -> "Settings":
+        encryption, lookup = self.session_encryption_key, self.session_lookup_key
+        message = None
+        if (encryption is None) != (lookup is None):
+            message = "Both session keys must be configured together"
+        elif encryption is not None and lookup is not None:
+            if hmac.compare_digest(decode_session_key(encryption), decode_session_key(lookup)):
+                message = "Session keys must be distinct"
+        if message:
+            # Pydantic serializes the entire model as error input for after validators.
+            raise ValidationError.from_exception_data(
+                "Settings",
+                [
+                    {
+                        "type": "value_error",
+                        "loc": (),
+                        "input": None,
+                        "ctx": {"error": ValueError(message)},
+                    }
+                ],
+            )
+        return self
 
     @field_validator("mongodb_connection_string")
     @classmethod

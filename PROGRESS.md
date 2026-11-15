@@ -1,6 +1,6 @@
 # Novy Backend Progress
 
-**Last reviewed:** 2026-11-14
+**Last reviewed:** 2026-11-15
 
 This is the current-state inventory for the backend workspace. Planned work is not implemented work;
 see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
@@ -30,19 +30,23 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
   provisioned unique issuer/subject index in `platform_db.builder_profiles`.
 - [x] An isolated Atlas profile test verified concurrent duplicate protection, issuer separation,
   a majority-acknowledged disable followed by a denied lookup, and malformed-status rejection.
+- [x] Internal builder-session service with independent encryption and lookup keys, encrypted token
+  storage, seven-day idle and 30-day absolute expiry, revocation, and current profile checks.
+- [x] Explicit session-index provisioning, a host-only secure cookie helper, and an isolated Atlas
+  test of session persistence, expiry, and concurrent touch/revoke behavior.
 - [ ] Production API contracts, readiness checks, CI, and target-runtime deployment verification.
 - [ ] Project/data repositories, remaining indexes and migrations, transaction failure and failover
   coverage, database-specific authorization rules, and backups.
-- [ ] Supabase Auth integration, builder/app-user sessions, CSRF, and account status enforcement.
+- [ ] Supabase Auth integration, generated-app sessions, CSRF, and protected HTTP account checks.
 - [ ] Project and data APIs, revision conflict handling, template provisioning, import, and duplicate.
 - [ ] Isolated preview data, strict preview validation, hosted runtime, and project access rules.
 - [ ] Verified Vercel deployment and same-origin routing through a real browser.
 
-The implementation covers the application foundation, MongoDB client lifecycle, and an internal
-builder-profile repository. The actual builder-profile collection and index were created, but no
-real profile was provisioned. There are no authentication or project APIs, Supabase integration,
-browser sessions, or hosted prototypes. Historical frontend documents describe other contexts and
-are not evidence of working backend features here.
+The implementation covers the application foundation, MongoDB client lifecycle, and internal
+builder-profile and session components. The builder-profile and session collections and indexes were
+created, but no real profile or browser session was provisioned. There are no authentication or
+project APIs, Supabase integration, CSRF protection, or hosted prototypes. Historical frontend
+documents describe other contexts and are not evidence of working backend features here.
 
 ## Approved Direction
 
@@ -52,6 +56,7 @@ are not evidence of working backend features here.
 - **Authentication:** separate builder and shared app-user identity realms, server-side opaque
   sessions, session-bound CSRF bootstrap, explicit refresh, and current `is_active` checks for every
   applicable account and project/environment membership.
+- **Builder session lifetime:** seven days of inactivity with a 30-day absolute maximum.
 - **Runtime access:** default deny, with explicit `public` operations or `owner_only` access for the
   project builder; per-project logical `_users` memberships and project-bound runtime sessions.
 - **Project saves:** loose, structurally safe drafts; strict validation before preview/publish;
@@ -63,7 +68,7 @@ These are approved decisions and future work, not completed features.
 
 ## Verification
 
-- Default local suite: 232 passed and two live integration tests skipped on Python 3.12.16.
+- Default local suite: 509 passed and three live integration tests skipped on Python 3.12.16.
 - The explicitly enabled live `platform_db` integration test passed on the configured Atlas cluster.
   It verified CRUD, unique-index enforcement, a committed two-document transaction, and rollback
   visibility with ID reuse; the driver's abort acknowledgement was not established. Its synthetic
@@ -84,6 +89,13 @@ These are approved decisions and future work, not completed features.
 - The actual `platform_db.builder_profiles` collection and its identity index were provisioned and
   verified; repeating index setup succeeded. The collection had no records when checked. No Atlas
   Compass UI action or authenticated HTTP request was tested.
+- The opt-in Atlas session test passed with synthetic tokens in a separate scratch collection. It
+  checked index configuration and uniqueness, encrypted storage, idle expiry, and an atomic
+  touch/revoke race across clients. Synthetic records were removed; the empty scratch collection
+  and indexes were retained. Actual TTL-monitor deletion was not tested.
+- The actual `platform_db.builder_sessions` collection and indexes were provisioned and verified;
+  repeating index setup succeeded. No real builder session was created, and Supabase login, CSRF,
+  provider refresh, and deployed cookie behavior remain unverified.
 - Vercel deployment and rewrites, real application-level transaction/index behavior and failure
   modes, and live Supabase user-authentication behavior have not been verified. Docker was not
   available for a local MongoDB replica set.

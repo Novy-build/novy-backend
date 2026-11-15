@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from novy.composition import create_builder_session_service
 from novy.infrastructure.mongodb import PLATFORM_DATABASE_NAME, create_mongo_client
 from novy.infrastructure.settings import Settings
 from novy.presentation.http.health import router as health_router
@@ -24,8 +25,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             application.state.platform_database = (
                 client[PLATFORM_DATABASE_NAME] if client is not None else None
             )
+            application.state.builder_session_service = (
+                create_builder_session_service(application.state.platform_database, settings)
+                if application.state.platform_database is not None
+                and settings.session_encryption_key is not None
+                and settings.session_lookup_key is not None
+                else None
+            )
             yield
         finally:
+            application.state.builder_session_service = None
             application.state.mongo_client = None
             application.state.platform_database = None
             if client is not None:

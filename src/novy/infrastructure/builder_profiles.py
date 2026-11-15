@@ -19,16 +19,10 @@ from novy.domain.builder import (
     BuilderProfileAlreadyExists,
     BuilderProfileDataError,
 )
+from novy.infrastructure.bson_document import StrictDocument as _StrictDocument
 
 BUILDER_PROFILES_COLLECTION = "builder_profiles"
 BUILDER_IDENTITY_INDEX = "builder_identity_unique_v1"
-
-
-class _StrictDocument(dict[str, Any]):
-    def __setitem__(self, key: str, value: Any) -> None:
-        if key in self:
-            raise ValueError("Duplicate BSON key")
-        super().__setitem__(key, value)
 
 
 def _profile_id(identity: BuilderIdentity) -> ObjectId:

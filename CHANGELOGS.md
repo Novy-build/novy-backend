@@ -5,6 +5,26 @@ first, and retain previous entries as project history.
 
 ## Unreleased
 
+### 2026-11-15 - Builder session foundation
+
+#### Added
+- Added internal builder-session models, secure cookie helpers, current-profile checks, and
+  seven-day idle / 30-day absolute expiry and revocation rules. No authentication routes were added.
+- Added independent keyed credential lookup and AES-256-GCM protection for provider tokens, with
+  validated local configuration and no hard-coded or logged secrets.
+- Added an async MongoDB session repository, explicit unique-digest and absolute-expiry TTL index
+  migration, atomic touch/revoke operations, and focused offline and opt-in Atlas tests.
+
+#### Verification
+- The default local suite passed 509 tests with three opt-in live tests skipped. Ruff lint/format,
+  mypy on `src` and `tests`, and `uv lock --check` passed.
+- The opt-in Atlas session test passed for encrypted persistence, unique digests, idle expiry, and
+  a two-client touch/revoke race. Synthetic records were removed; the empty scratch collection and
+  indexes were intentionally retained. Actual TTL-monitor deletion was not tested.
+- The actual `builder_sessions` collection and indexes were provisioned and verified; rerunning the
+  index migration succeeded. Supabase login, CSRF, provider refresh, project access, and deployed
+  browser cookies remain unimplemented or unverified.
+
 ### 2026-11-14 - Builder profile persistence
 
 #### Added
