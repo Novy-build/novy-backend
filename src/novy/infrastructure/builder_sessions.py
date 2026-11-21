@@ -197,6 +197,63 @@ class MongoBuilderSessionRepository:
     async def revoke(self, expected: BuilderSession) -> BuilderSession | None:
         return await self._mutate(expected, touch=False)
 
+    async def replace_tokens(
+        self, expected: BuilderSession, encrypted: EncryptedTokens
+    ) -> BuilderSession | None:
+        invalid = False
+        encrypted_document: dict[str, Any] = {}
+        try:
+            query = _document(expected)
+            if query["revoked_at"] is not None:
+                raise ValueError
+            encrypted_document = _document(replace(expected, tokens=encrypted))["tokens"]
+            if set(encrypted_document) != {"key_id", "nonce", "ciphertext", "version"}:
+                raise ValueError
+        except _ERRORS:
+            invalid = True
+        if invalid:
+            raise BuilderSessionInvalid() from None
+        query["revoked_at"] = {"$type": 10}
+        query["$expr"] = {"$eq": [{"$type": "$revoked_at"}, "null"]}
+        await self._require_indexes()
+        try:
+            document = await self._write.find_one_and_update(
+                query,
+                [
+                    {
+                        "$set": {
+                            "tokens": encrypted_document,
+                            "revision": {"$add": ["$revision", 1]},
+                        }
+                    }
+                ],
+                upsert=False,
+                return_document=ReturnDocument.AFTER,
+                maxTimeMS=3000,
+                collation={"locale": "simple"},
+            )
+            if document is None:
+                return None
+            result = _decode(document)
+            original = _document(expected)
+            actual = _document(result)
+            for field in ("tokens", "revision"):
+                original.pop(field)
+                actual.pop(field)
+            if (
+                original != actual
+                or result.revision != expected.revision + 1
+                or result.tokens != encrypted
+                or result.revoked_at is not None
+                or result.last_seen_at != expected.last_seen_at
+                or result.idle_expires_at != expected.idle_expires_at
+            ):
+                raise ValueError
+            return result
+        except _ERRORS:
+            pass
+        raise BuilderSessionStoreError() from None
+
     async def _mutate(self, expected: BuilderSession, *, touch: bool) -> BuilderSession | None:
         invalid = False
         try:

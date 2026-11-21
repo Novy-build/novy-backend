@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     )
 
     environment: Literal["development", "test", "production"] = "production"
+    allowed_origins: str = ""
     mongodb_connection_string: SecretStr | None = Field(
         default=None, validation_alias="MONGODB_CONNECTION_STRING", repr=False, exclude=True
     )

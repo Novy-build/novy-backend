@@ -65,7 +65,15 @@ def test_nonproduction_docs_only_document_liveness(
     assert "/openapi.json" in docs.text
     assert schema.status_code == 200
     paths = schema.json()["paths"]
-    assert set(paths) == {"/api/v1/health/live"}
+    assert set(paths) == {
+        "/api/v1/health/live",
+        "/api/v1/auth/csrf",
+        "/api/v1/auth/register",
+        "/api/v1/auth/login",
+        "/api/v1/auth/session",
+        "/api/v1/auth/refresh",
+        "/api/v1/auth/logout",
+    }
     assert set(paths["/api/v1/health/live"]) == {"get"}
     assert redoc.status_code == 404
 
@@ -83,7 +91,6 @@ def test_production_docs_are_disabled(path: str) -> None:
     "path",
     [
         "/api/v1/projects",
-        "/api/v1/auth/session",
         "/api/v1/health/ready",
         "/api/v1/health/readiness",
     ],

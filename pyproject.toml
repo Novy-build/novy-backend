@@ -11,6 +11,8 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "cryptography==50.0.2",
     "fastapi==0.162.6",
+    "httpx2==2.16.0",
+    "pyjwt==2.15.1",
     "pydantic-settings==2.16.3",
     "pymongo==4.20.0",
 ]

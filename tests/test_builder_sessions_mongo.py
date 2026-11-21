@@ -48,6 +48,8 @@ SESSION = BuilderSession(
     revoked_at=None,
     revision=0,
 )
+REPLACEMENT_TOKENS = EncryptedTokens("key2", b"r" * 12, b"e" * 24)
+UPDATED = replace(SESSION, tokens=REPLACEMENT_TOKENS, revision=1)
 
 
 def reject_network(*args: object, **kwargs: object) -> NoReturn:
@@ -84,6 +86,8 @@ def run_operation(repo: MongoBuilderSessionRepository, operation: str) -> Any:
         return asyncio.run(repo.find(SESSION.digest))
     if operation == "touch":
         return asyncio.run(repo.touch(SESSION))
+    if operation == "replace_tokens":
+        return asyncio.run(repo.replace_tokens(SESSION, REPLACEMENT_TOKENS))
     return asyncio.run(repo.revoke(SESSION))
 
 
@@ -103,7 +107,7 @@ def test_options_and_migration() -> None:
     ]
 
 
-@pytest.mark.parametrize("operation", ["insert", "find", "touch", "revoke"])
+@pytest.mark.parametrize("operation", ["insert", "find", "touch", "revoke", "replace_tokens"])
 @pytest.mark.parametrize(
     "bad", ["missing", "ttl", "unique", "partial", "hidden", "sparse", "error"]
 )
@@ -262,7 +266,7 @@ def test_duplicate_bson_rejected_and_sanitized() -> None:
     assert exc.value.__context__ is None
 
 
-@pytest.mark.parametrize("operation", ["insert", "find", "touch", "revoke"])
+@pytest.mark.parametrize("operation", ["insert", "find", "touch", "revoke", "replace_tokens"])
 @pytest.mark.parametrize(
     "error",
     [PyMongoError(SECRET), DuplicateKeyError(SECRET), InvalidBSON(SECRET), ValueError(SECRET)],
@@ -312,3 +316,134 @@ def test_invalid_inputs_do_not_query() -> None:
         asyncio.run(repo.revoke(replace(SESSION, revoked_at=NOW)))
     write.index_information.assert_not_awaited()
     read.find_one.assert_not_awaited()
+
+
+def test_replace_tokens_cas_filter_and_pipeline() -> None:
+    repo, _, write, _ = repository()
+    write.find_one_and_update.return_value = _document(UPDATED)
+    assert asyncio.run(repo.replace_tokens(SESSION, REPLACEMENT_TOKENS)) == UPDATED
+    args, kwargs = write.find_one_and_update.await_args
+    query, pipeline = args
+    expected = _document(SESSION)
+    expected["revoked_at"] = {"$type": 10}
+    expected["$expr"] = {"$eq": [{"$type": "$revoked_at"}, "null"]}
+    assert query == expected
+    assert kwargs == {
+        "upsert": False,
+        "return_document": ReturnDocument.AFTER,
+        "maxTimeMS": 3000,
+        "collation": {"locale": "simple"},
+    }
+    assert pipeline == [
+        {
+            "$set": {
+                "tokens": {
+                    "key_id": REPLACEMENT_TOKENS.key_id,
+                    "nonce": REPLACEMENT_TOKENS.nonce,
+                    "ciphertext": REPLACEMENT_TOKENS.ciphertext,
+                    "version": REPLACEMENT_TOKENS.version,
+                },
+                "revision": {"$add": ["$revision", 1]},
+            }
+        }
+    ]
+    assert SESSION.tokens != REPLACEMENT_TOKENS
+    assert SESSION.revision == 0 and SESSION.revoked_at is None
+    write.find_one_and_update.return_value = None
+    assert asyncio.run(repo.replace_tokens(SESSION, REPLACEMENT_TOKENS)) is None
+
+
+def test_replace_tokens_requires_explicit_bson_null() -> None:
+    repo, _, write, _ = repository()
+    asyncio.run(repo.replace_tokens(SESSION, REPLACEMENT_TOKENS))
+    query = write.find_one_and_update.await_args.args[0]
+    assert query["revoked_at"] == {"$type": 10}
+    assert query["$expr"] == {"$eq": [{"$type": "$revoked_at"}, "null"]}
+    assert query["revoked_at"] is not None
+    assert query["revision"] == SESSION.revision
+    assert query["tokens"] == _document(SESSION)["tokens"]
+    assert query["last_seen_at"] == SESSION.last_seen_at
+    assert query["idle_expires_at"] == SESSION.idle_expires_at
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("_id", "b" * 32),
+        ("kind", "app"),
+        ("digest", b"x" * 32),
+        ("issuer", "other"),
+        ("subject", "other"),
+        ("builder_id", "foreign"),
+        ("schema_version", 2),
+        ("revision", 2),
+        ("created_at", NOW + timedelta(seconds=1)),
+        ("absolute_expires_at", NOW + timedelta(days=31)),
+        ("last_seen_at", NOW + timedelta(days=1)),
+        ("revoked_at", NOW),
+        (
+            "tokens",
+            _document(replace(SESSION, tokens=EncryptedTokens("key3", b"q" * 12, b"f" * 20)))[
+                "tokens"
+            ],
+        ),
+    ],
+)
+def test_replace_tokens_rejects_changed_return(field: str, value: Any) -> None:
+    repo, _, write, _ = repository()
+    doc = _document(UPDATED)
+    doc[field] = value
+    write.find_one_and_update.return_value = doc
+    with pytest.raises(BuilderSessionStoreError) as exc:
+        asyncio.run(repo.replace_tokens(SESSION, REPLACEMENT_TOKENS))
+    assert exc.value.__context__ is None
+
+
+def test_replace_tokens_rejects_activity_writes() -> None:
+    repo, _, write, _ = repository()
+    shifted = replace(
+        UPDATED,
+        last_seen_at=NOW + timedelta(days=1),
+        idle_expires_at=NOW + timedelta(days=8),
+    )
+    write.find_one_and_update.return_value = _document(shifted)
+    with pytest.raises(BuilderSessionStoreError):
+        asyncio.run(repo.replace_tokens(SESSION, REPLACEMENT_TOKENS))
+
+
+def test_replace_tokens_rejects_plaintext_in_returned_tokens() -> None:
+    repo, _, write, _ = repository()
+    doc = _document(UPDATED)
+    doc["tokens"] = {
+        "key_id": "key2",
+        "nonce": b"r" * 12,
+        "ciphertext": b"e" * 24,
+        "version": 1,
+        "access_token": SECRET,
+    }
+    write.find_one_and_update.return_value = doc
+    with pytest.raises(BuilderSessionStoreError) as exc:
+        asyncio.run(repo.replace_tokens(SESSION, REPLACEMENT_TOKENS))
+    assert exc.value.__context__ is None
+
+
+def test_replace_tokens_invalid_inputs_do_not_query() -> None:
+    repo, _, write, _ = repository()
+    broken_tokens = replace(SESSION.tokens)
+    object.__setattr__(broken_tokens, "nonce", b"bad")
+    bad_encrypted = replace(REPLACEMENT_TOKENS)
+    object.__setattr__(bad_encrypted, "nonce", b"bad")
+    try:
+        with pytest.raises(BuilderSessionInvalid):
+            asyncio.run(
+                repo.replace_tokens(replace(SESSION, tokens=broken_tokens), REPLACEMENT_TOKENS)
+            )
+        with pytest.raises(BuilderSessionInvalid):
+            asyncio.run(repo.replace_tokens(SESSION, bad_encrypted))
+        with pytest.raises(BuilderSessionInvalid):
+            asyncio.run(repo.replace_tokens(replace(SESSION, revoked_at=NOW), REPLACEMENT_TOKENS))
+    finally:
+        object.__setattr__(broken_tokens, "nonce", b"n" * 12)
+        object.__setattr__(bad_encrypted, "nonce", b"r" * 12)
+    write.index_information.assert_not_awaited()
+    write.find_one_and_update.assert_not_awaited()

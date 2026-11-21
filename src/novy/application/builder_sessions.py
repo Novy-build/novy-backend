@@ -35,6 +35,10 @@ class BuilderSessionRepository(Protocol):
 
     async def revoke(self, expected: BuilderSession) -> BuilderSession | None: ...
 
+    async def replace_tokens(
+        self, expected: BuilderSession, encrypted: EncryptedTokens
+    ) -> BuilderSession | None: ...
+
 
 class SessionProtector(Protocol):
     def generate_credential(self) -> str: ...
@@ -103,6 +107,26 @@ def _same_record(before: BuilderSession, after: BuilderSession) -> bool:
         and before.absolute_expires_at == after.absolute_expires_at
         and before.schema_version == after.schema_version
         and after.revision == before.revision + 1
+    )
+
+
+def _same_replacement(
+    before: BuilderSession, after: BuilderSession, encrypted: EncryptedTokens
+) -> bool:
+    """Refresh changes only tokens and revision; all activity state is preserved."""
+    return (
+        before.record_id == after.record_id
+        and before.digest == after.digest
+        and before.identity == after.identity
+        and before.builder_id == after.builder_id
+        and before.created_at == after.created_at
+        and before.absolute_expires_at == after.absolute_expires_at
+        and before.schema_version == after.schema_version
+        and after.revision == before.revision + 1
+        and after.last_seen_at == before.last_seen_at
+        and after.idle_expires_at == before.idle_expires_at
+        and after.revoked_at is None
+        and after.tokens == encrypted
     )
 
 
@@ -192,6 +216,66 @@ class BuilderSessionService:
             ):
                 raise BuilderSessionInvalid()
             return ResolvedBuilderSession(record_id=touched.record_id, profile=profile)
+        raise BuilderSessionConflict()
+
+    async def provider_tokens(self, credential: str) -> ProviderTokens:
+        """Return decrypted provider tokens to a trusted internal caller only."""
+        digest = self._protector.digest(credential)
+        snapshot = await self._sessions.find(digest)
+        if snapshot is None:
+            raise BuilderSessionInvalid()
+        _validate(snapshot, digest)
+        if not snapshot.is_valid_at(self._now()):
+            raise BuilderSessionInvalid()
+        profile = await require_active_builder_profile(self._profiles, snapshot.identity)
+        if profile.id != snapshot.builder_id:
+            raise BuilderSessionInvalid()
+        return self._protector.decrypt(
+            record_id=snapshot.record_id,
+            identity=snapshot.identity,
+            builder_id=snapshot.builder_id,
+            envelope=snapshot.tokens,
+        )
+
+    async def replace_provider_tokens(
+        self, credential: str, tokens: ProviderTokens
+    ) -> ResolvedBuilderSession:
+        """Rotate provider tokens for a live session without extending its lifetime."""
+        digest = self._protector.digest(credential)
+        if not isinstance(tokens, ProviderTokens):
+            raise ValueError("Invalid provider tokens")
+        ProviderTokens(tokens.access_token, tokens.refresh_token)
+        for _ in range(3):
+            snapshot = await self._sessions.find(digest)
+            if snapshot is None:
+                raise BuilderSessionInvalid()
+            _validate(snapshot, digest)
+            if not snapshot.is_valid_at(self._now()):
+                raise BuilderSessionInvalid()
+            self._protector.decrypt(
+                record_id=snapshot.record_id,
+                identity=snapshot.identity,
+                builder_id=snapshot.builder_id,
+                envelope=snapshot.tokens,
+            )
+            profile = await require_active_builder_profile(self._profiles, snapshot.identity)
+            if profile.id != snapshot.builder_id:
+                raise BuilderSessionInvalid()
+            encrypted = self._protector.encrypt(
+                record_id=snapshot.record_id,
+                identity=snapshot.identity,
+                builder_id=snapshot.builder_id,
+                tokens=tokens,
+            )
+            replaced = await self._sessions.replace_tokens(snapshot, encrypted)
+            if replaced is None:
+                continue
+            _validate(replaced, digest)
+            if not _same_replacement(snapshot, replaced, encrypted) or not replaced.is_valid_at(
+                self._now()
+            ):
+                raise BuilderSessionInvalid()
+            return ResolvedBuilderSession(record_id=replaced.record_id, profile=profile)
         raise BuilderSessionConflict()
 
     async def revoke(self, credential: str) -> RevocationResult:
