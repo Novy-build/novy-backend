@@ -76,21 +76,27 @@ async def register(
             email=payload.email, password=payload.password, display_name=payload.display_name
         )
     except Exception as exc:  # translated below; never expose raw provider details
-        raise _translate(exc)
+        raise _translate(exc) from None
     return _registration_response(
         result, response, getattr(request.app.state, "csrf_service", None)
     )
 
 
-@router.post("/login", response_model=UserResponse, dependencies=[Depends(require_unsafe_request_guards)])
+@router.post(
+    "/login",
+    response_model=UserResponse,
+    dependencies=[Depends(require_unsafe_request_guards)],
+)
 async def login(payload: LoginRequest, request: Request, response: Response) -> UserResponse:
     service = _auth_service(request)
     try:
         result = await service.login(email=payload.email, password=payload.password)
     except Exception as exc:
-        raise _translate(exc)
+        raise _translate(exc) from None
     _set_session_cookies(response, result, getattr(request.app.state, "csrf_service", None))
-    return UserResponse(id=result.user.id, displayName=result.user.display_name, email=result.user.email)
+    return UserResponse(
+        id=result.user.id, displayName=result.user.display_name, email=result.user.email
+    )
 
 
 @router.get("/session", response_model=UserResponse)
@@ -100,23 +106,29 @@ async def session(request: Request, response: Response) -> UserResponse:
     try:
         user = await service.session(credential)
     except Exception as exc:
-        raise _translate(exc)
+        raise _translate(exc) from None
     csrf = getattr(request.app.state, "csrf_service", None)
     if csrf is not None:
         set_csrf_cookie(response, csrf.token_for_session(credential))
     return UserResponse(id=user.id, displayName=user.display_name, email=user.email)
 
 
-@router.post("/refresh", response_model=UserResponse, dependencies=[Depends(require_unsafe_request_guards)])
+@router.post(
+    "/refresh",
+    response_model=UserResponse,
+    dependencies=[Depends(require_unsafe_request_guards)],
+)
 async def refresh(request: Request, response: Response) -> UserResponse:
     service = _auth_service(request)
     credential = get_session_credential(request)
     try:
         result = await service.refresh(credential)
     except Exception as exc:
-        raise _translate(exc)
+        raise _translate(exc) from None
     _set_session_cookies(response, result, getattr(request.app.state, "csrf_service", None))
-    return UserResponse(id=result.user.id, displayName=result.user.display_name, email=result.user.email)
+    return UserResponse(
+        id=result.user.id, displayName=result.user.display_name, email=result.user.email
+    )
 
 
 @router.post("/logout", status_code=204, dependencies=[Depends(require_unsafe_request_guards)])
@@ -126,7 +138,7 @@ async def logout(request: Request, response: Response) -> Response:
     try:
         await service.logout(credential)
     except Exception as exc:
-        raise _translate(exc)
+        raise _translate(exc) from None
     clear_auth_cookies(response)
     response.status_code = 204
     response.headers["Cache-Control"] = "no-store"
@@ -134,8 +146,8 @@ async def logout(request: Request, response: Response) -> Response:
 
 
 def _auth_service(request: Request) -> BuilderAuthService:
-    service = getattr(request.app.state, "builder_auth_service", None)
-    if service is None:
+    service = request.app.state.builder_auth_service
+    if not isinstance(service, BuilderAuthService):
         raise api_error(503, "auth_unavailable", "Authentication is unavailable")
     return service
 

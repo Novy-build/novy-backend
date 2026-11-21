@@ -137,7 +137,11 @@ class BuilderAuthService:
     ) -> BuilderProfile:
         if not isinstance(email, str) or not email.strip():
             raise BuilderAuthError("invalid_identity", 401)
-        name = display_name.strip() if isinstance(display_name, str) and display_name.strip() else email
+        name = (
+            display_name.strip()
+            if isinstance(display_name, str) and display_name.strip()
+            else email
+        )
         existing = await self._profiles.find_by_identity(identity)
         if existing is None:
             try:
