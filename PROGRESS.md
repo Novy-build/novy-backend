@@ -43,9 +43,9 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
   `/auth/logout`), CSRF service, origin guards, and session cookie handling are implemented and
   unit-tested. Real-browser and live-Supabase verification remain pending.
 - [x] Project and data APIs, revision conflict handling, template provisioning, import, and duplicate.
-  Phase 3 Steps 1-13 implemented. Phase 4 Steps 1-11 implemented. Phase 5 Steps 1-14 implemented
-  (strict validation, immutable snapshots, handoff grants, app identity, default-deny policy,
-  activation/status routes, migrations, verification).
+  Phase 3 Steps 1-13 implemented. Phase 4 Steps 1-11 implemented. Phase 5 Steps 1-14 implemented.
+  Phase 6 Steps 1-3, 8 partial (Vercel config, local verification, provider tests, rate limiter).
+  Steps 4-7, 9-11 pending Vercel deployment and real browser verification.
 - [x] Phase 3 Step 1 — Project domain models (`src/novy/domain/projects.py`): `Project`, `ProjectDraft`,
   `ProjectRevision`, lifecycle states, `projectType` (`'app' | 'website'`), supported schema version 14,
   and domain exceptions. 24 unit tests pass; ruff and mypy clean.
@@ -125,6 +125,16 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
   mypy src tests all clean.
 - [x] Phase 5 Step 14 — Documentation: PROGRESS.md updated, PHASE_5_PLAN.md created.
 - [x] MongoDB database name is now extracted from the connection string URI path
+- [x] Phase 6 Step 1 — Vercel deployment configuration: created `vercel.json` with
+  FastAPI entrypoint (`src/main.py`), `/api/*` rewrite, Python runtime. Ruff and mypy clean.
+- [x] Phase 6 Step 2 (partial) — Local verification: health endpoint returns `{"status":"alive"}`.
+  Vercel CLI not installed; Vercel deployment verification pending user setup.
+- [x] Phase 6 Step 3 (partial) — Supabase integration tests: 63 passed. Real Supabase
+  live verification pending (no user registered yet). Atlas live tests: 31 passed (platform_db,
+  builder profiles, builder sessions) + 2 project tests.
+- [x] Phase 6 Step 8 (partial) — Operational readiness: `RateLimiter` and `RateLimitBucket`
+  implemented (`src/novy/infrastructure/rate_limit.py`). In-memory token bucket; distributed
+  store (Redis/MongoDB) for multi-instance remains. Ruff and mypy clean.
   (`src/novy/infrastructure/mongodb.py`: `database_name_from_connection_string`), falling back to
   `platform_db` when no database is specified. Updated `src/novy/main.py` lifespan to use it.
   Enables separate databases per environment (e.g., `platform_db_preview`, `platform_db_dev`)

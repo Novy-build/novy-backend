@@ -5,6 +5,31 @@ first, and retain previous entries as project history.
 
 ## Unreleased
 
+### 2026-11-22 - Phase 6 release readiness (partial)
+
+#### Added
+- Vercel deployment configuration: `vercel.json` with FastAPI entrypoint (`src/main.py`),
+  `/api/*` rewrite, and Python runtime.
+- `RateLimiter` and `RateLimitBucket` (`src/novy/infrastructure/rate_limit.py`): in-memory
+  token bucket rate limiter keyed by (principal, operation).
+- `database_name_from_connection_string()` in `src/novy/infrastructure/mongodb.py`: extracts
+  database name from connection string URI, enabling per-environment databases.
+- Live integration test `tests/integration/test_projects_live.py` with `--verify-projects-db` flag:
+  real MongoDB project CRUD, CAS, rename, delete, tombstone, cross-owner rejection.
+
+#### Changed
+- `MongoProjectRepository`: removed unsupported `max_time_ms` kwarg from all PyMongo calls;
+  fixed `_require_indexes` hidden-field check.
+- `src/novy/main.py` lifespan: uses extracted database name from connection string.
+
+#### Verified
+- 697 unit/integration tests passed, 4 skipped (live integration).
+- Ruff check and format: all passed.
+- Mypy (src + tests): success, no issues.
+- Local health endpoint: `{"status":"alive"}`.
+- Supabase integration tests: 63 passed.
+- Atlas live tests: 31 + 2 project tests passed.
+
 ### 2026-11-22 - Builder authentication and CSRF protection
 
 #### Added
