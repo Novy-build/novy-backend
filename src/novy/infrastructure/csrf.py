@@ -23,7 +23,7 @@ PREAUTH_TTL_SECONDS = 900
 _PREAUTH_STATE_DOMAIN = b"novy:csrf:preauth:state:v1\0"
 _PREAUTH_TOKEN_DOMAIN = b"novy:csrf:preauth:token:v1\0"
 _SESSION_TOKEN_DOMAIN = b"novy:csrf:session:token:v1\0"
-_ENVIRONMENTS = frozenset({"development", "test", "production"})
+_ENVIRONMENTS = frozenset({"development", "test", "preview", "production"})
 _CREDENTIAL = re.compile(r"[A-Za-z0-9_-]{43}\Z", re.ASCII)
 
 
