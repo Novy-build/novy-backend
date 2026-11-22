@@ -488,6 +488,6 @@ def test_startup_does_not_issue_index_ddl(monkeypatch: pytest.MonkeyPatch) -> No
     settings = Settings(mongodb_connection_string=SecretStr("mongodb://synthetic.example.test"))
     with TestClient(main.create_app(settings)):
         client.__getitem__.assert_called_once_with("platform_db")
-        assert len(client.mock_calls) == 9
+        assert len(client.mock_calls) == 18
     client.close.assert_awaited_once_with()
-    assert len(client.mock_calls) == 10
+    assert len(client.mock_calls) == 19

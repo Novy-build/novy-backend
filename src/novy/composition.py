@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Any
 
 import httpx2
@@ -8,6 +9,14 @@ from novy.application.builder_sessions import BuilderSessionService
 from novy.application.import_project import ImportService
 from novy.application.projects import ProjectService
 from novy.application.snapshots import SnapshotService
+from novy.infrastructure.app_data import (
+    APP_COLLECTIONS_COLLECTION,
+    APP_DATABASES_COLLECTION,
+    APP_RECORDS_COLLECTION,
+    MongoAppCollectionRepository,
+    MongoAppDatabaseRepository,
+    MongoAppRecordRepository,
+)
 from novy.infrastructure.builder_profiles import (
     BUILDER_PROFILES_COLLECTION,
     MongoBuilderProfileRepository,
@@ -46,6 +55,25 @@ def create_builder_session_service(
             lookup_key=decode_session_key(settings.session_lookup_key),
             environment=settings.environment,
         ),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class AppDataRepositories:
+    databases: MongoAppDatabaseRepository
+    collections: MongoAppCollectionRepository
+    records: MongoAppRecordRepository
+
+
+def create_app_data_repositories(
+    database: AsyncDatabase[dict[str, Any]],
+) -> AppDataRepositories | None:
+    if database is None:
+        return None
+    return AppDataRepositories(
+        databases=MongoAppDatabaseRepository(database[APP_DATABASES_COLLECTION]),
+        collections=MongoAppCollectionRepository(database[APP_COLLECTIONS_COLLECTION]),
+        records=MongoAppRecordRepository(database[APP_RECORDS_COLLECTION]),
     )
 
 

@@ -78,6 +78,13 @@ def test_nonproduction_docs_only_document_liveness(
         "/api/v1/projects/{project_id}/document",
         "/api/v1/projects/{project_id}/duplicate",
         "/api/v1/projects/import",
+        "/api/v1/projects/{project_id}/app-data",
+        "/api/v1/projects/{project_id}/databases",
+        "/api/v1/projects/{project_id}/databases/{database_id}",
+        "/api/v1/projects/{project_id}/collections",
+        "/api/v1/projects/{project_id}/collections/{collection_id}",
+        "/api/v1/projects/{project_id}/collections/{collection_id}/records",
+        "/api/v1/projects/{project_id}/collections/{collection_id}/records/{record_id}",
         "/api/v1/projects/{project_id}/activate",
         "/api/v1/projects/{project_id}/status",
     }

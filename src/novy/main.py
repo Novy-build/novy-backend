@@ -6,6 +6,7 @@ import httpx2
 from fastapi import FastAPI
 
 from novy.composition import (
+    create_app_data_repositories,
     create_builder_auth_service,
     create_builder_session_service,
     create_csrf_service,
@@ -19,6 +20,7 @@ from novy.infrastructure.mongodb import (
     database_name_from_connection_string,
 )
 from novy.infrastructure.settings import Settings
+from novy.presentation.http.app_data import router as app_data_router
 from novy.presentation.http.auth import router as auth_router
 from novy.presentation.http.errors import install_error_handlers
 from novy.presentation.http.health import router as health_router
@@ -64,6 +66,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 if application.state.platform_database is not None
                 else None
             )
+            application.state.app_data_repositories = (
+                create_app_data_repositories(application.state.platform_database)
+                if application.state.platform_database is not None
+                else None
+            )
             application.state.snapshot_service = (
                 create_snapshot_service(application.state.platform_database)
                 if application.state.platform_database is not None
@@ -90,6 +97,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             application.state.csrf_service = None
             application.state.project_service = None
             application.state.import_service = None
+            application.state.app_data_repositories = None
             application.state.snapshot_service = None
             application.state.mongo_client = None
             application.state.platform_database = None
@@ -119,6 +127,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(projects_router, prefix="/api/v1")
+    app.include_router(app_data_router, prefix="/api/v1")
     app.include_router(snapshots_router, prefix="/api/v1")
     return app
 

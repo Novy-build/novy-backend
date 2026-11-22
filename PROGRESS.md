@@ -7,6 +7,10 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
 
 ## Workspace Status
 
+- [x] Removed unsupported `max_time_ms` from app-data Mongo operations; schema saves no longer fail
+  with `findAndModify.max_time_ms is an unknown field`.
+- [x] Owner-scoped project data HTTP routes are wired: `/app-data` snapshot plus database,
+  collection, and record CRUD under `/api/v1/projects/{id}`. The editor Data panel can now load.
 - [x] Index migrations now use the database name from `MONGODB_CONNECTION_STRING`, matching the
   application lifespan and preventing missing-index failures on per-environment databases.
 - [x] `ProjectResponse` carries a top-level `screens` array from the project draft, matching the

@@ -31,8 +31,6 @@ APP_DATABASES_COLLECTION = "app_databases"
 APP_COLLECTIONS_COLLECTION = "app_collections"
 APP_RECORDS_COLLECTION = "app_records"
 
-_MAX_TIME_MS = 5000
-
 
 def _now() -> datetime:
     now = datetime.now(UTC)
@@ -89,9 +87,7 @@ class MongoAppDatabaseRepository(_BaseRepo, AppDatabaseRepository):
         except AppDataError:
             return None
         try:
-            doc = await self._read_collection.find_one(
-                {"_id": oid, "project_id": project_id}, max_time_ms=_MAX_TIME_MS
-            )
+            doc = await self._read_collection.find_one({"_id": oid, "project_id": project_id})
         except (PyMongoError, BSONError):
             raise AppDataStoreError() from None
         if doc is None:
@@ -106,9 +102,7 @@ class MongoAppDatabaseRepository(_BaseRepo, AppDatabaseRepository):
 
     async def find_by_project(self, project_id: str) -> list[AppDatabase]:
         try:
-            cursor = self._read_collection.find(
-                {"project_id": project_id}, max_time_ms=_MAX_TIME_MS
-            )
+            cursor = self._read_collection.find({"project_id": project_id})
             docs = await cursor.to_list(length=1000)
         except (PyMongoError, BSONError):
             raise AppDataStoreError() from None
@@ -124,6 +118,30 @@ class MongoAppDatabaseRepository(_BaseRepo, AppDatabaseRepository):
                 )
             )
         return result
+
+    async def update(self, database_id: str, project_id: str, name: str) -> AppDatabase:
+        try:
+            oid = _to_object_id(database_id)
+        except AppDataError:
+            raise AppDataStoreError() from None
+        now = _now()
+        try:
+            result = await self._write_collection.find_one_and_update(
+                {"_id": oid, "project_id": project_id},
+                {"$set": {"name": name, "updated_at": now}},
+                return_document=True,
+            )
+        except (PyMongoError, BSONError):
+            raise AppDataStoreError() from None
+        if result is None:
+            raise AppDataStoreError() from None
+        return AppDatabase(
+            id=str(result["_id"]),
+            project_id=result["project_id"],
+            name=result["name"],
+            created_at=result["created_at"],
+            updated_at=result["updated_at"],
+        )
 
     async def delete(self, database_id: str, project_id: str) -> None:
         try:
@@ -180,9 +198,7 @@ class MongoAppCollectionRepository(_BaseRepo, AppCollectionRepository):
         except AppDataError:
             return None
         try:
-            doc = await self._read_collection.find_one(
-                {"_id": oid, "project_id": project_id}, max_time_ms=_MAX_TIME_MS
-            )
+            doc = await self._read_collection.find_one({"_id": oid, "project_id": project_id})
         except (PyMongoError, BSONError):
             raise AppDataStoreError() from None
         if doc is None:
@@ -205,7 +221,7 @@ class MongoAppCollectionRepository(_BaseRepo, AppCollectionRepository):
         if database_id is not None:
             query["database_id"] = database_id
         try:
-            cursor = self._read_collection.find(query, max_time_ms=_MAX_TIME_MS)
+            cursor = self._read_collection.find(query)
             docs = await cursor.to_list(length=1000)
         except (PyMongoError, BSONError):
             raise AppDataStoreError() from None
@@ -239,7 +255,6 @@ class MongoAppCollectionRepository(_BaseRepo, AppCollectionRepository):
                 {"_id": oid, "project_id": project_id},
                 {"$set": update_set},
                 return_document=True,
-                max_time_ms=_MAX_TIME_MS,
             )
         except (PyMongoError, BSONError):
             raise AppDataStoreError() from None
@@ -311,7 +326,6 @@ class MongoAppRecordRepository(_BaseRepo, AppRecordRepository):
                     "collection_id": collection_id,
                     "environment": environment,
                 },
-                max_time_ms=_MAX_TIME_MS,
             )
         except (PyMongoError, BSONError):
             raise AppDataStoreError() from None
@@ -337,7 +351,6 @@ class MongoAppRecordRepository(_BaseRepo, AppRecordRepository):
                     "collection_id": collection_id,
                     "environment": environment,
                 },
-                max_time_ms=_MAX_TIME_MS,
             )
             docs = await cursor.to_list(length=1000)
         except (PyMongoError, BSONError):
@@ -380,7 +393,6 @@ class MongoAppRecordRepository(_BaseRepo, AppRecordRepository):
                 },
                 {"$set": {"values": values, "updated_at": now}},
                 return_document=True,
-                max_time_ms=_MAX_TIME_MS,
             )
         except (PyMongoError, BSONError):
             raise AppDataStoreError() from None

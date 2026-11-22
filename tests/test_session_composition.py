@@ -49,7 +49,7 @@ def test_lifespan_wires_and_clears_session_service(monkeypatch: pytest.MonkeyPat
     with TestClient(app):
         assert isinstance(app.state.builder_session_service, BuilderSessionService)
         db = client.__getitem__.return_value
-        assert db.__getitem__.call_count == 4
+        assert db.__getitem__.call_count == 7
         db.__getitem__.assert_any_call("builder_sessions")
         db.__getitem__.assert_any_call("builder_profiles")
     assert app.state.builder_session_service is None

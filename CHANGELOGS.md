@@ -5,6 +5,25 @@ first, and retain previous entries as project history.
 
 ## Unreleased
 
+### 2026-11-22 - Project data HTTP APIs
+
+#### Fixed
+- Removed unsupported `max_time_ms` from app-data Mongo operations. Schema saves were failing with
+  `OperationFailure: findAndModify.max_time_ms is an unknown field`, surfaced as
+  “Application data storage is unavailable”. Direct Atlas verification confirmed update succeeds
+  without it.
+
+#### Added
+- Owner-scoped project data routes under `/api/v1/projects/{id}`: `GET /app-data` snapshot,
+  database CRUD, collection CRUD, and record CRUD in the preview environment.
+- `AppDataRepositories` composition wiring and a `app_data_v1` index migration for the new
+  `app_databases`, `app_collections`, and `app_records` collections.
+- Contract tests for the frontend app-data snapshot shape and route authentication.
+
+#### Verified
+- 701 tests passed, 4 live integration tests skipped.
+- Ruff check and mypy (src + tests): clean.
+
 ### 2026-11-22 - Frontend integration contract fixes
 
 #### Fixed
