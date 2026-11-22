@@ -9,6 +9,7 @@ from novy.composition import (
     create_builder_auth_service,
     create_builder_session_service,
     create_csrf_service,
+    create_import_service,
     create_project_service,
 )
 from novy.infrastructure.mongodb import PLATFORM_DATABASE_NAME, create_mongo_client
@@ -49,6 +50,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 if application.state.platform_database is not None
                 else None
             )
+            application.state.import_service = (
+                create_import_service(application.state.platform_database)
+                if application.state.platform_database is not None
+                else None
+            )
             if (
                 sessions is not None
                 and settings.supabase_url is not None
@@ -69,6 +75,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             application.state.builder_session_service = None
             application.state.csrf_service = None
             application.state.project_service = None
+            application.state.import_service = None
             application.state.mongo_client = None
             application.state.platform_database = None
             if http_client is not None:

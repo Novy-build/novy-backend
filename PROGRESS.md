@@ -42,10 +42,9 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
   layer, auth routes (`/auth/csrf`, `/auth/register`, `/auth/login`, `/auth/session`, `/auth/refresh`,
   `/auth/logout`), CSRF service, origin guards, and session cookie handling are implemented and
   unit-tested. Real-browser and live-Supabase verification remain pending.
-- [~] Project and data APIs, revision conflict handling, template provisioning, import, and duplicate.
-  Phase 3 Steps 1-9 implemented (domain, repository port, MongoDB repo, use cases, template
-  provisioning, data repos, safe query, deletion fencing, HTTP routes). Import and full duplicate
-  with record copying remain for Phase 4.
+- [x] Project and data APIs, revision conflict handling, template provisioning, import, and duplicate.
+  Phase 3 Steps 1-13 implemented. Phase 4 Steps 1-11 implemented (schema-only duplicate, copy-records,
+  typed remapping, import with idempotency, HTTP routes, tests, verification).
 - [x] Phase 3 Step 1 — Project domain models (`src/novy/domain/projects.py`): `Project`, `ProjectDraft`,
   `ProjectRevision`, lifecycle states, `projectType` (`'app' | 'website'`), supported schema version 14,
   and domain exceptions. 24 unit tests pass; ruff and mypy clean.
@@ -82,6 +81,23 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
   scaffold/lifespan tests updated for project routes. 689 passed, 3 skipped.
 - [x] Phase 3 Step 13 — Verification: full backend suite (689 passed), ruff check, ruff format,
   mypy src tests all clean. `uv lock --check` not re-run (no dependency changes).
+- [x] Phase 4 Step 1 — Schema-only duplicate (`src/novy/application/duplicate.py`,
+  `src/novy/infrastructure/duplicate.py`): `DuplicateService`, `MongoDuplicateRepository`,
+  transactional copy of project + databases + collections with fresh IDs. Ruff and mypy clean.
+- [x] Phase 4 Step 2 — Explicit copy-records: `copy_records` flag in duplicate endpoint and
+  repository. Records copied with fresh IDs and remapped collection references. Ruff and mypy clean.
+- [x] Phase 4 Step 3 — Typed reference remapping (`_remap_draft`): distinguishes concrete collection/
+  database IDs from dynamic expressions and arbitrary text. Remaps known reference fields, preserves
+  unknown content. Ruff and mypy clean.
+- [x] Phase 4 Step 4-8 — Import: transport, validation, ID allocation, two-pass remapping, atomic
+  persistence, idempotency, security scope (`src/novy/application/import_project.py`,
+  `src/novy/infrastructure/import_project.py`). `POST /projects/import` endpoint with
+  `X-Idempotency-Key` header. Records go to preview environment only. Ruff and mypy clean.
+- [x] Phase 4 Step 9 — Indexes and migrations: idempotency collection (`idempotency`) with
+  owner/operation/key uniqueness. No new index migration required beyond Phase 3.
+- [x] Phase 4 Step 10 — Tests: 7 import application unit tests. 696 passed, 3 skipped.
+- [x] Phase 4 Step 11 — Verification: full backend suite (696 passed), ruff check, ruff format,
+  mypy src tests all clean.
 - [ ] Isolated preview data, strict preview validation, hosted runtime, and project access rules.
 - [ ] Verified Vercel deployment and same-origin routing through a real browser.
 

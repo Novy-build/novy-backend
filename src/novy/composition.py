@@ -5,6 +5,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 from novy.application.builder_auth import BuilderAuthService
 from novy.application.builder_sessions import BuilderSessionService
+from novy.application.import_project import ImportService
 from novy.application.projects import ProjectService
 from novy.infrastructure.builder_profiles import (
     BUILDER_PROFILES_COLLECTION,
@@ -15,6 +16,8 @@ from novy.infrastructure.builder_sessions import (
     MongoBuilderSessionRepository,
 )
 from novy.infrastructure.csrf import CsrfService
+from novy.infrastructure.duplicate import MongoDuplicateRepository
+from novy.infrastructure.import_project import MongoImportRepository
 from novy.infrastructure.projects import (
     PROJECTS_COLLECTION,
     MongoProjectRepository,
@@ -46,7 +49,14 @@ def create_project_service(database: AsyncDatabase[dict[str, Any]]) -> ProjectSe
         return None
     return ProjectService(
         MongoProjectRepository(database[PROJECTS_COLLECTION]),
+        duplicate_store=MongoDuplicateRepository(database),
     )
+
+
+def create_import_service(database: AsyncDatabase[dict[str, Any]]) -> ImportService | None:
+    if database is None:
+        return None
+    return ImportService(MongoImportRepository(database))
 
 
 def create_csrf_service(settings: Settings) -> CsrfService | None:

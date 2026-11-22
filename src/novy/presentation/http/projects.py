@@ -10,6 +10,10 @@ from typing import Any
 
 from fastapi import APIRouter, Header, Request, Response
 
+from novy.application.import_project import (
+    ImportPayload,
+    ImportService,
+)
 from novy.application.projects import (
     CreateProjectInput,
     ProjectService,
@@ -43,6 +47,13 @@ def _project_service(request: Request) -> ProjectService:
     return service
 
 
+def _import_service(request: Request) -> ImportService:
+    service = getattr(request.app.state, "import_service", None)
+    if not isinstance(service, ImportService):
+        raise api_error(503, "import_unavailable", "Import service is unavailable")
+    return service
+
+
 def _owner_id(request: Request) -> str:
     # In production this comes from the authenticated builder session.
     # For now, derive from a header or session credential.
@@ -68,6 +79,20 @@ def _translate(exc: Exception) -> ApiError:
     if isinstance(exc, ValueError):
         return api_error(400, "validation_error", "Invalid input")
     return api_error(500, "project_error", "Project operation failed")
+
+
+def _translate_import(exc: Exception) -> ApiError:
+    if isinstance(exc, ApiError):
+        return exc
+    from novy.application.import_project import ImportConflictError, ImportStoreError
+
+    if isinstance(exc, ImportConflictError):
+        return api_error(409, "import_conflict", "Import idempotency key conflict")
+    if isinstance(exc, ImportStoreError):
+        return api_error(503, "import_store_unavailable", "Import storage is unavailable")
+    if isinstance(exc, ValueError):
+        return api_error(400, "validation_error", str(exc))
+    return api_error(500, "import_error", "Import failed")
 
 
 @router.get("", response_model=ProjectListResponse)
@@ -172,14 +197,39 @@ async def rename_project(
 
 
 @router.post("/{project_id}/duplicate", response_model=ProjectResponse, status_code=201)
-async def duplicate_project(project_id: str, request: Request) -> ProjectResponse:
+async def duplicate_project(
+    project_id: str, request: Request, copy_records: bool = False
+) -> ProjectResponse:
     service = _project_service(request)
     owner_id = _owner_id(request)
     try:
-        result = await service.duplicate_project(project_id, owner_id)
+        result = await service.duplicate_project(project_id, owner_id, copy_records=copy_records)
     except Exception as exc:
         raise _translate(exc) from None
     return _to_response(result)
+
+
+@router.post("/import", response_model=ProjectResponse, status_code=201)
+async def import_project(request: Request) -> ProjectResponse:
+    service = _import_service(request)
+    owner_id = _owner_id(request)
+    body = await request.json()
+    idempotency_key = request.headers.get("X-Idempotency-Key", "")
+    payload = ImportPayload(
+        project=body.get("project", {}),
+        app_data=body.get("appData", {}),
+    )
+    try:
+        result = await service.import_project(owner_id, payload, idempotency_key)
+    except Exception as exc:
+        raise _translate_import(exc) from None
+    # Fetch the imported project
+    project_service = _project_service(request)
+    try:
+        view = await project_service.get_project(result.project_id, owner_id)
+    except Exception as exc:
+        raise _translate(exc) from None
+    return _to_response(view)
 
 
 @router.delete("/{project_id}", status_code=204)

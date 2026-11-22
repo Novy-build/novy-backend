@@ -8,7 +8,7 @@ use cases depend on it.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
 
 from novy.domain.projects import (
     Project,
@@ -104,8 +104,13 @@ def _to_view(project: Project) -> ProjectView:
 class ProjectService:
     """Use cases for owner-scoped project management."""
 
-    def __init__(self, repository: ProjectRepository) -> None:
+    def __init__(
+        self,
+        repository: ProjectRepository,
+        duplicate_store: Any = None,
+    ) -> None:
         self._repository = repository
+        self._duplicate_store = duplicate_store
 
     async def create_project(self, input: CreateProjectInput) -> ProjectView:
         if not input.owner_id or not input.owner_id.strip():
@@ -156,8 +161,26 @@ class ProjectService:
     async def duplicate_project(
         self, project_id: str, owner_id: str, *, copy_records: bool = False
     ) -> ProjectView:
-        # Schema-only duplication: copy project + draft, new IDs, no records.
-        # Full record copying is implemented in Phase 4.
+        if self._duplicate_store is not None:
+            source = await self._repository.find_by_id_and_owner(project_id, owner_id)
+            if source is None or source.lifecycle_state == "deleted":
+                raise ProjectNotFoundError()
+            from novy.application.duplicate import DuplicateService
+
+            service = DuplicateService(self._duplicate_store)
+            result = await service.duplicate(
+                source_project_id=project_id,
+                owner_id=owner_id,
+                new_name=f"{source.name} (copy)",
+                copy_records=copy_records,
+            )
+            # Fetch the newly created project to return a full view
+            project = await self._repository.find_by_id_and_owner(result.project_id, owner_id)
+            if project is None:
+                raise ProjectNotFoundError()
+            return _to_view(project)
+
+        # Fallback: basic schema-only copy (no databases/collections)
         source = await self._repository.find_by_id_and_owner(project_id, owner_id)
         if source is None or source.lifecycle_state == "deleted":
             raise ProjectNotFoundError()
