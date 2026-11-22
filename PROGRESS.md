@@ -129,6 +129,8 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
   FastAPI entrypoint (`src/main.py`), `/api/*` rewrite, Python runtime. Ruff and mypy clean.
 - [x] Phase 6 Step 2 (partial) — Local verification: health endpoint returns `{"status":"alive"}`.
   Vercel CLI not installed; Vercel deployment verification pending user setup.
+- [x] Fixed `NOVY_ENVIRONMENT` validation: added `preview` as a valid environment value
+  (`Literal["development", "test", "preview", "production"]`). Docs enabled for preview. Ruff and mypy clean.
 - [x] Phase 6 Step 3 (partial) — Supabase integration tests: 63 passed. Real Supabase
   live verification pending (no user registered yet). Atlas live tests: 31 passed (platform_db,
   builder profiles, builder sessions) + 2 project tests.

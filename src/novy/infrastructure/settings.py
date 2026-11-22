@@ -36,7 +36,7 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
-    environment: Literal["development", "test", "production"] = "production"
+    environment: Literal["development", "test", "preview", "production"] = "production"
     allowed_origins: str = ""
     mongodb_connection_string: SecretStr | None = Field(
         default=None, validation_alias="MONGODB_CONNECTION_STRING", repr=False, exclude=True
