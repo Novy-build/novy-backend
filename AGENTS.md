@@ -58,7 +58,7 @@ under `docs/frontend-handoff/` are historical context, not rules for this reposi
 - Use `platform_db` for platform and logically project-scoped data. Preview and live data must be
   separated by a server-enforced environment boundary in every relevant query and index.
 - Preserve project schema versions, nested IDs, responsive layouts, routes, behavior graphs, data
-  bindings, and supported legacy data. Current frontend project DTOs write schema version 13.
+  bindings, and supported legacy data. Current frontend project DTOs write schema version 14.
 - Treat `schemaVersion` and save `revision` as different concepts. Require an atomic owner-scoped
   revision comparison and return HTTP 409 with `stale_revision` for a conflicting document save.
 - Store structurally safe drafts without enforcing complete project semantics; strictly validate

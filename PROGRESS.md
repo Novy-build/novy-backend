@@ -1,6 +1,6 @@
 # Novy Backend Progress
 
-**Last reviewed:** 2026-11-15
+**Last reviewed:** 2026-11-22
 
 This is the current-state inventory for the backend workspace. Planned work is not implemented work;
 see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
@@ -25,7 +25,8 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
   unique-index enforcement, transaction commit, and observed rollback in an isolated scratch
   collection. Synthetic records were removed; the scratch collection and index were retained.
 - [x] The configured Supabase URL and publishable key passed a local, read-only Auth settings
-  smoke test; an invalid control key was rejected. This is not an implemented auth integration.
+  smoke test; an invalid control key was rejected. The Supabase Auth client, JWT validator, and
+  `BuilderAuthService` are implemented but not verified against live Supabase.
 - [x] Internal builder-profile model, repository, and active-status lookup, with an explicitly
   provisioned unique issuer/subject index in `platform_db.builder_profiles`.
 - [x] An isolated Atlas profile test verified concurrent duplicate protection, issuer separation,
@@ -37,16 +38,22 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
 - [ ] Production API contracts, readiness checks, CI, and target-runtime deployment verification.
 - [ ] Project/data repositories, remaining indexes and migrations, transaction failure and failover
   coverage, database-specific authorization rules, and backups.
-- [ ] Supabase Auth integration, generated-app sessions, CSRF, and protected HTTP account checks.
+- [x] Supabase Auth integration, CSRF protection, and protected HTTP account checks — auth service
+  layer, auth routes (`/auth/csrf`, `/auth/register`, `/auth/login`, `/auth/session`, `/auth/refresh`,
+  `/auth/logout`), CSRF service, origin guards, and session cookie handling are implemented and
+  unit-tested. Real-browser and live-Supabase verification remain pending.
 - [ ] Project and data APIs, revision conflict handling, template provisioning, import, and duplicate.
 - [ ] Isolated preview data, strict preview validation, hosted runtime, and project access rules.
 - [ ] Verified Vercel deployment and same-origin routing through a real browser.
 
-The implementation covers the application foundation, MongoDB client lifecycle, and internal
-builder-profile and session components. The builder-profile and session collections and indexes were
-created, but no real profile or browser session was provisioned. There are no authentication or
-project APIs, Supabase integration, CSRF protection, or hosted prototypes. Historical frontend
-documents describe other contexts and are not evidence of working backend features here.
+The implementation covers the application foundation, MongoDB client lifecycle, internal
+builder-profile and session components, CSRF protection, and Supabase Auth integration. The
+builder-profile and session collections and indexes were provisioned on `platform_db`. Authentication
+routes (`/auth/csrf`, `/auth/register`, `/auth/login`, `/auth/session`, `/auth/refresh`,
+`/auth/logout`) and CSRF/origin guards are implemented and unit-tested, but no real profile or
+browser session has been provisioned against live Supabase. There are no project APIs, hosted
+prototypes, or real-browser verification yet. Historical frontend documents describe other contexts
+and are not evidence of working backend features here.
 
 ## Approved Direction
 
@@ -68,7 +75,7 @@ These are approved decisions and future work, not completed features.
 
 ## Verification
 
-- Default local suite: 509 passed and three live integration tests skipped on Python 3.12.16.
+- Default local suite: 654 passed and three live integration tests skipped on Python 3.12.16.
 - The explicitly enabled live `platform_db` integration test passed on the configured Atlas cluster.
   It verified CRUD, unique-index enforcement, a committed two-document transaction, and rollback
   visibility with ID reuse; the driver's abort acknowledgement was not established. Its synthetic
@@ -94,8 +101,10 @@ These are approved decisions and future work, not completed features.
   touch/revoke race across clients. Synthetic records were removed; the empty scratch collection
   and indexes were retained. Actual TTL-monitor deletion was not tested.
 - The actual `platform_db.builder_sessions` collection and indexes were provisioned and verified;
-  repeating index setup succeeded. No real builder session was created, and Supabase login, CSRF,
+  repeating index setup succeeded. No real builder session was created, and Supabase login,
   provider refresh, and deployed cookie behavior remain unverified.
+- CSRF and authentication routes are implemented and covered by unit tests (CSRF service, pre-auth
+  issue/verify, origin allow-listing, session cookie attributes, auth endpoint error mapping).
 - Vercel deployment and rewrites, real application-level transaction/index behavior and failure
-  modes, and live Supabase user-authentication behavior have not been verified. Docker was not
-  available for a local MongoDB replica set.
+  modes, real-browser cookie/CSRF flow, and live Supabase user-authentication behavior have not been
+  verified. Docker was not available for a local MongoDB replica set.

@@ -61,9 +61,10 @@ evidence that production AI or an admin console is in scope.
   runtime features. Define a positive v1 capability allowlist; reject unsupported requirements at
   strict validation with actionable issues. Browser-only features need an explicit security and
   capability decision before inclusion.
-- The planned future website extension uses `projectType: app | website` metadata, defaulting
-  missing metadata to `app` while retaining project schema version 13. Website functionality is not
-  v1 unless separately approved. This is future metadata, not a claim that the current DTO contains it.
+- The planned website extension uses `projectType: app | website` project metadata, persisted
+  server-side in Phase 3, defaulting missing metadata to `app` while retaining project schema
+  version 14. Full website publishing (generated-app scrolling-page template) is not v1 unless
+  separately approved. `projectType` storage and return are v1; website rendering behavior is future scope.
 - A full admin console and generalized multi-builder collaboration are not implied by this plan.
   Operational account disable, auditing, and recovery are required; any broader administration
   interface needs its own authorization and scope decision.
@@ -290,7 +291,7 @@ node, and field IDs retain their existing string identities and references.
 | `app_user_identities` | App-realm issuer/subject, platform-level `is_active`, minimal profile | Unique `(issuer, subject)`; no credentials |
 | `project_memberships` | `project_id`, `environment`, app-user subject/identity, `is_active`, server-managed membership data; logical `_users` | Unique `(project_id, environment, identity_id)` and scoped lookup index |
 | `sessions` | Hashed opaque ID, realm, principal, expiry/revocation, CSRF binding, encrypted provider tokens, refresh version/lease, optional project/environment | Unique token hash; scoped principal/expiry indexes; TTL only for cleanup |
-| `projects` | ObjectId, owner, name, timestamps, draft JSON, independent `schemaVersion` and revision, lifecycle state and configuration/data fences | `(owner_id, updated_at, _id)` for listing; owner/id/revision CAS; owner/state filters |
+| `projects` | ObjectId, owner, name, timestamps, draft JSON, independent `schemaVersion` and revision, lifecycle state, configuration/data fences, `project_type` (`'app' | 'website'`) | `(owner_id, updated_at, _id)` for listing; owner/id/revision CAS; owner/state filters |
 | `app_databases` | ObjectId, project ID, logical database name and timestamps | Project-scoped list/lookup; any name uniqueness must be explicitly specified |
 | `app_collections` | ObjectId, project/database IDs, field definitions with embedded field IDs, record identifier and draft schema/policies | `(project_id, database_id, _id)`; enforce parent scope and chosen name rules |
 | `app_records` | ObjectId, project/collection IDs, product environment, field-ID-keyed values and timestamps | `(project_id, environment, collection_id, _id)` and indexes for supported scoped queries |
@@ -336,7 +337,7 @@ needed; establish operational settings and test them rather than assuming a mock
   unknown supported draft content and all responsive layouts, routes, behavior graphs, bindings,
   and embedded IDs; do not force complete-project validation on save.
 - `schemaVersion` describes the project format; `revision` is an independent monotonically
-  changing save/concurrency token. Current frontend mappers write schema version 13. Support only
+  changing save/concurrency token. Current frontend mappers write schema version 14. Support only
   explicitly identified legacy versions and migrations proven against frontend fixtures; reject
   unsupported future or unsafe versions clearly, never rewrite them speculatively.
 - The current client sends quoted `If-Match: "<revision>"` with document saves. Atomically compare
@@ -463,7 +464,7 @@ until the two repositories agree on an OpenAPI contract.
 | --- | --- | --- |
 | `GET /auth/session`; `POST /auth/login`, `/auth/register`, `/auth/logout` | User object `{id, displayName, email}`, pending confirmation flag on signup, cookie credentials | Add bootstrap and explicit refresh operations; session-bound CSRF on all unsafe calls; generic enumeration-safe signup; fix logout failure handling |
 | `GET /projects`; `POST /projects` | `{projects: [...]}` summaries; create sends `{name, template}` and expects a project with `revision` | Owner-scoped list and atomic template/data provisioning; add safe create idempotency and coordinate pagination |
-| `GET /projects/{id}`; `PUT /projects/{id}/document` | Full project DTO, quoted `If-Match`, `schemaVersion: 13`, screens and revision | Scoped CAS, missing-precondition error, 409 `stale_revision`, safe client conflict resolution and lost-response handling |
+| `GET /projects/{id}`; `PUT /projects/{id}/document` | Full project DTO, quoted `If-Match`, `schemaVersion: 14`, screens and revision | Scoped CAS, missing-precondition error, 409 `stale_revision`, safe client conflict resolution and lost-response handling |
 | `PATCH /projects/{id}`; `POST /projects/{id}/duplicate`; `DELETE /projects/{id}` | Rename body `{name}`; duplicate currently sends no copy option; delete treats not found as complete | Race-safe rename/delete, schema-only duplicate default, coordinated explicit copy-records toggle and idempotency |
 | `POST /projects/import` | `{project, appData}` and project DTO response; current local marker is global | Typed two-pass remap, account-scoped marker and server idempotency key; explicit bounded 413 behavior |
 | `GET/POST /projects/{id}/databases`; `PATCH/DELETE .../databases/{databaseId}` | Database lists are bare arrays; objects use string IDs and ISO dates | Builder-scoped logical data; authorize project and parent IDs; environment routing/contract must be coordinated |

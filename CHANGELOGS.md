@@ -5,6 +5,21 @@ first, and retain previous entries as project history.
 
 ## Unreleased
 
+### 2026-11-22 - Builder authentication and CSRF protection
+
+#### Added
+- Added Supabase Auth integration layer: `SupabaseAuthClient` (sign-up, sign-in, refresh), `SupabaseJwtValidator`, and `BuilderAuthService` orchestrating register/login/session/refresh/logout against verified Supabase identities, with server-owned builder profile creation and encrypted provider-token sessions.
+- Added builder authentication HTTP routes under `/api/v1/auth`: `GET /csrf` (pre-auth bootstrap), `POST /register` (200/202 pending confirmation), `POST /login`, `GET /session`, `POST /refresh`, `POST /logout`, all with session-bound CSRF and exact-origin guards.
+- Added CSRF service (`CsrfService`) with domain-separated HMAC-SHA256 signing: pre-auth state/token issue and verify, session token binding to opaque credentials, canonical token validation, and origin allow-listing with dev/test localhost defaults.
+- Added secure cookie helpers: `__Host-novy_builder_session` (Secure, HttpOnly, SameSite=Lax, Path=/, 30-day max-age), `novy_csrf` (Secure, not HttpOnly, SameSite=Lax, Path=/), `__Host-novy_preauth` (Secure, HttpOnly, SameSite=Lax, Path=/, 900-second max-age), and `clear_auth_cookies`.
+- Added safe error envelope `{"error":{code,message,details,requestId}}` with 401/403/409/428/429/5xx mapping and no secret or credential leakage.
+- Added unit tests for CSRF service, cookie attributes, auth dependencies, session settings, session security, and auth endpoint error translation.
+
+#### Verification
+- Default local suite: 654 passed, 3 live integration tests skipped (Python 3.12.16).
+- Ruff lint/format, mypy on `src` and `tests`, and `uv lock --check` passed locally.
+- Live-Supabase signup/login/refresh, real-browser cookie/CSRF flow through the Vercel rewrite, and Atlas Compass disable enforcement remain unverified.
+
 ### 2026-11-15 - Builder session foundation
 
 #### Added
