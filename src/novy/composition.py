@@ -5,6 +5,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 from novy.application.builder_auth import BuilderAuthService
 from novy.application.builder_sessions import BuilderSessionService
+from novy.application.projects import ProjectService
 from novy.infrastructure.builder_profiles import (
     BUILDER_PROFILES_COLLECTION,
     MongoBuilderProfileRepository,
@@ -14,6 +15,10 @@ from novy.infrastructure.builder_sessions import (
     MongoBuilderSessionRepository,
 )
 from novy.infrastructure.csrf import CsrfService
+from novy.infrastructure.projects import (
+    PROJECTS_COLLECTION,
+    MongoProjectRepository,
+)
 from novy.infrastructure.session_security import SessionSecurity
 from novy.infrastructure.settings import Settings, decode_session_key
 from novy.infrastructure.supabase_auth import SupabaseAuthClient
@@ -33,6 +38,14 @@ def create_builder_session_service(
             lookup_key=decode_session_key(settings.session_lookup_key),
             environment=settings.environment,
         ),
+    )
+
+
+def create_project_service(database: AsyncDatabase[dict[str, Any]]) -> ProjectService | None:
+    if database is None:
+        return None
+    return ProjectService(
+        MongoProjectRepository(database[PROJECTS_COLLECTION]),
     )
 
 

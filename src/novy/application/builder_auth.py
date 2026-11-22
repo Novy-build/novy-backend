@@ -67,9 +67,7 @@ class BuilderAuthService:
         self._provider = provider
         self._jwt = jwt_validator
 
-    async def register(
-        self, *, email: str, password: str, display_name: str
-    ) -> RegistrationResult:
+    async def register(self, *, email: str, password: str, display_name: str) -> RegistrationResult:
         result = await self._provider.sign_up(email, password, display_name)
         if result.tokens is None:
             return RegistrationResult(
@@ -152,9 +150,7 @@ class BuilderAuthService:
 
     @staticmethod
     def _view(profile: BuilderProfile) -> AuthUserView:
-        return AuthUserView(
-            id=profile.id, display_name=profile.display_name, email=profile.email
-        )
+        return AuthUserView(id=profile.id, display_name=profile.display_name, email=profile.email)
 
     @staticmethod
     def _pending_user(user: SupabaseUser) -> AuthUserView:

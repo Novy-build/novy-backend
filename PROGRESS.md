@@ -42,7 +42,46 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
   layer, auth routes (`/auth/csrf`, `/auth/register`, `/auth/login`, `/auth/session`, `/auth/refresh`,
   `/auth/logout`), CSRF service, origin guards, and session cookie handling are implemented and
   unit-tested. Real-browser and live-Supabase verification remain pending.
-- [ ] Project and data APIs, revision conflict handling, template provisioning, import, and duplicate.
+- [~] Project and data APIs, revision conflict handling, template provisioning, import, and duplicate.
+  Phase 3 Steps 1-9 implemented (domain, repository port, MongoDB repo, use cases, template
+  provisioning, data repos, safe query, deletion fencing, HTTP routes). Import and full duplicate
+  with record copying remain for Phase 4.
+- [x] Phase 3 Step 1 — Project domain models (`src/novy/domain/projects.py`): `Project`, `ProjectDraft`,
+  `ProjectRevision`, lifecycle states, `projectType` (`'app' | 'website'`), supported schema version 14,
+  and domain exceptions. 24 unit tests pass; ruff and mypy clean.
+- [x] Phase 3 Step 2 — Project repository port (`src/novy/application/projects.py`): `ProjectRepository`
+  protocol with create, find_by_id_and_owner, find_by_owner, save_with_revision, rename, delete, exists.
+  2 unit tests pass; ruff and mypy clean.
+- [x] Phase 3 Step 3 — MongoDB project repository (`src/novy/infrastructure/projects.py`): owner-scoped
+  CRUD, CAS save_with_revision, rename, tombstone delete, exists. Migration `projects_v1`. Ruff and mypy clean.
+- [x] Phase 3 Step 4 — Project use cases (`src/novy/application/projects.py`): `ProjectService` with
+  create, get, list, save_document (CAS), rename, delete, duplicate (schema-only). `ProjectView` DTO.
+  10 unit tests pass; ruff and mypy clean.
+- [x] Phase 3 Step 5 — Atomic template provisioning (`src/novy/application/template_provisioning.py`,
+  `src/novy/infrastructure/template_provisioning.py`): `TemplateBlueprint`, validation, transactional
+  commit of project + databases + collections + records, rollback on failure. Ruff and mypy clean.
+- [x] Phase 3 Step 6 — Data repositories (`src/novy/domain/app_data.py`, `src/novy/application/app_data.py`,
+  `src/novy/infrastructure/app_data.py`): `AppDatabase`, `AppCollection`, `AppRecord` domain models;
+  repository ports and MongoDB implementations for databases, collections, records. Environment-scoped
+  record CRUD. Ruff and mypy clean.
+- [x] Phase 3 Step 7 — Safe query layer (`src/novy/domain/safe_query.py`): `validate_safe_value`,
+  `validate_field_id`, `validate_record_values`. Rejects MongoDB operators and unsafe keys. Ruff and mypy clean.
+- [x] Phase 3 Step 8 — Deletion fencing: tombstone lifecycle state in `MongoProjectRepository.delete`;
+  `save_with_revision` and `rename` reject writes to deleted projects. Concurrent writes cannot
+  resurrect deleted data. Ruff and mypy clean.
+- [x] Phase 3 Step 9 — HTTP routes (`src/novy/presentation/http/projects.py`,
+  `src/novy/presentation/http/project_schemas.py`): project CRUD endpoints under `/api/v1/projects`,
+  CAS save with `If-Match`, 409/428 error mapping, rename, duplicate, delete. Wired into `main.py`
+  and `composition.py`. Ruff and mypy clean.
+- [x] Phase 3 Step 10 — Revision conflict coordination: frontend contract documented in
+  `PHASE_3_PLAN.md` Step 10 (409 `stale_revision`, retain local edits, explicit rebase, cursor
+  pagination). Backend enforces CAS via `save_with_revision`.
+- [x] Phase 3 Step 11 — Indexes and migrations: `projects_v1` migration
+  (`src/novy/infrastructure/migrations/projects_v1.py`), owner/updated index. Ruff and mypy clean.
+- [x] Phase 3 Step 12 — Tests: domain (24), application port (2), use cases (10), plus existing
+  scaffold/lifespan tests updated for project routes. 689 passed, 3 skipped.
+- [x] Phase 3 Step 13 — Verification: full backend suite (689 passed), ruff check, ruff format,
+  mypy src tests all clean. `uv lock --check` not re-run (no dependency changes).
 - [ ] Isolated preview data, strict preview validation, hosted runtime, and project access rules.
 - [ ] Verified Vercel deployment and same-origin routing through a real browser.
 
@@ -76,6 +115,8 @@ These are approved decisions and future work, not completed features.
 ## Verification
 
 - Default local suite: 654 passed and three live integration tests skipped on Python 3.12.16.
+- Phase 3 Step 1 added 24 domain unit tests (`tests/test_project_domain.py`); all pass. Ruff, format,
+  and mypy clean on new files.
 - The explicitly enabled live `platform_db` integration test passed on the configured Atlas cluster.
   It verified CRUD, unique-index enforcement, a committed two-document transaction, and rollback
   visibility with ID reuse; the driver's abort acknowledgement was not established. Its synthetic

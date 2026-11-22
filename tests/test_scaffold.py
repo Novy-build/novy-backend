@@ -73,6 +73,10 @@ def test_nonproduction_docs_only_document_liveness(
         "/api/v1/auth/session",
         "/api/v1/auth/refresh",
         "/api/v1/auth/logout",
+        "/api/v1/projects",
+        "/api/v1/projects/{project_id}",
+        "/api/v1/projects/{project_id}/document",
+        "/api/v1/projects/{project_id}/duplicate",
     }
     assert set(paths["/api/v1/health/live"]) == {"get"}
     assert redoc.status_code == 404
@@ -90,7 +94,6 @@ def test_production_docs_are_disabled(path: str) -> None:
 @pytest.mark.parametrize(
     "path",
     [
-        "/api/v1/projects",
         "/api/v1/health/ready",
         "/api/v1/health/readiness",
     ],

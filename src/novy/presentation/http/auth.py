@@ -67,9 +67,7 @@ async def csrf_bootstrap(request: Request, response: Response) -> CsrfBootstrapR
     },
     dependencies=[Depends(require_unsafe_request_guards)],
 )
-async def register(
-    payload: RegisterRequest, request: Request, response: Response
-) -> object:
+async def register(payload: RegisterRequest, request: Request, response: Response) -> object:
     service = _auth_service(request)
     try:
         result = await service.register(
