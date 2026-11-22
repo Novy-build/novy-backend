@@ -76,7 +76,7 @@ class SessionSecurity:
             or len(lookup_key) != 32
             or hmac.compare_digest(encryption_key, lookup_key)
             or type(environment) is not str
-            or environment not in ("development", "test", "production")
+            or environment not in ("development", "test", "preview", "production")
         ):
             raise ValueError("Invalid session security configuration")
         self._encryption_key = encryption_key
