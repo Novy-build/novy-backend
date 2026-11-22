@@ -47,7 +47,15 @@ async def require_unsafe_request_guards(request: Request) -> None:
     origins = allowed_origins(settings) if settings is not None else ()
     origin = request.headers.get("origin")
     if origin is None or origin.rstrip("/") not in origins:
-        raise api_error(403, "origin_not_allowed", "Origin not allowed")
+        # In non-production environments, expose the received origin so operators
+        # can configure NOVY_ALLOWED_ORIGINS without guessing. Production stays opaque.
+        details: dict[str, object] | None = None
+        if settings is not None and settings.environment != "production":
+            details = {
+                "receivedOrigin": origin,
+                "expectedOrigins": list(origins),
+            }
+        raise api_error(403, "origin_not_allowed", "Origin not allowed", details=details)
 
     service = getattr(request.app.state, "csrf_service", None)
     if service is None:
