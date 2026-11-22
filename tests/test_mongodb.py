@@ -208,7 +208,7 @@ def test_lifespan_liveness_and_repeated_start(monkeypatch: pytest.MonkeyPatch) -
             assert response.status_code == 200
             assert response.json() == {"status": "alive"}
             assert client.get("/api/v1/health/ready").status_code == 404
-            assert len(expected.mock_calls) == 4
+            assert len(expected.mock_calls) == 9
         expected.close.assert_awaited_once_with()
         assert app.state.mongo_client is None
         assert app.state.platform_database is None

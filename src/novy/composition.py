@@ -7,6 +7,7 @@ from novy.application.builder_auth import BuilderAuthService
 from novy.application.builder_sessions import BuilderSessionService
 from novy.application.import_project import ImportService
 from novy.application.projects import ProjectService
+from novy.application.snapshots import SnapshotService
 from novy.infrastructure.builder_profiles import (
     BUILDER_PROFILES_COLLECTION,
     MongoBuilderProfileRepository,
@@ -24,6 +25,10 @@ from novy.infrastructure.projects import (
 )
 from novy.infrastructure.session_security import SessionSecurity
 from novy.infrastructure.settings import Settings, decode_session_key
+from novy.infrastructure.snapshots import (
+    SNAPSHOTS_COLLECTION,
+    MongoSnapshotRepository,
+)
 from novy.infrastructure.supabase_auth import SupabaseAuthClient
 from novy.infrastructure.supabase_jwt import SupabaseJwtValidator
 
@@ -57,6 +62,14 @@ def create_import_service(database: AsyncDatabase[dict[str, Any]]) -> ImportServ
     if database is None:
         return None
     return ImportService(MongoImportRepository(database))
+
+
+def create_snapshot_service(database: AsyncDatabase[dict[str, Any]]) -> SnapshotService | None:
+    if database is None:
+        return None
+    return SnapshotService(
+        MongoSnapshotRepository(database[SNAPSHOTS_COLLECTION]),
+    )
 
 
 def create_csrf_service(settings: Settings) -> CsrfService | None:

@@ -43,8 +43,9 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
   `/auth/logout`), CSRF service, origin guards, and session cookie handling are implemented and
   unit-tested. Real-browser and live-Supabase verification remain pending.
 - [x] Project and data APIs, revision conflict handling, template provisioning, import, and duplicate.
-  Phase 3 Steps 1-13 implemented. Phase 4 Steps 1-11 implemented (schema-only duplicate, copy-records,
-  typed remapping, import with idempotency, HTTP routes, tests, verification).
+  Phase 3 Steps 1-13 implemented. Phase 4 Steps 1-11 implemented. Phase 5 Steps 1-14 implemented
+  (strict validation, immutable snapshots, handoff grants, app identity, default-deny policy,
+  activation/status routes, migrations, verification).
 - [x] Phase 3 Step 1 — Project domain models (`src/novy/domain/projects.py`): `Project`, `ProjectDraft`,
   `ProjectRevision`, lifecycle states, `projectType` (`'app' | 'website'`), supported schema version 14,
   and domain exceptions. 24 unit tests pass; ruff and mypy clean.
@@ -98,6 +99,35 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
 - [x] Phase 4 Step 10 — Tests: 7 import application unit tests. 696 passed, 3 skipped.
 - [x] Phase 4 Step 11 — Verification: full backend suite (696 passed), ruff check, ruff format,
   mypy src tests all clean.
+- [x] Phase 5 Step 1 — Strict validation (`src/novy/domain/validation.py`): `validate_project`,
+  `validate_screen_identities`, `validate_node_identities`, `validate_component_types`,
+  `validate_routes`, `validate_data_bindings`, `validate_capability`, `SUPPORTED_CAPABILITIES`,
+  `ValidationIssue`, `ValidationError`. Ruff and mypy clean.
+- [x] Phase 5 Step 2 — Immutable prototype snapshots (`src/novy/domain/snapshots.py`,
+  `src/novy/application/snapshots.py`, `src/novy/infrastructure/snapshots.py`): `PrototypeSnapshot`
+  domain model, `SnapshotService` use cases, `MongoSnapshotRepository`. Ruff and mypy clean.
+- [x] Phase 5 Step 3 — Atomic snapshot activation: `SnapshotService.activate_snapshot` validates
+  snapshot exists and environment matches before setting active pointer. `MongoSnapshotRepository`
+  uses upsert for atomic active-pointer switch. Ruff and mypy clean.
+- [x] Phase 5 Step 8 — Default-deny policy (`src/novy/domain/policy.py`): `PolicyRule`, `PolicySet`,
+  `is_allowed` with public/owner_only/member/anonymous scopes, `exposed_fields_for`. Ruff and mypy clean.
+- [x] Phase 5 Step 9 — HTTP routes (`src/novy/presentation/http/snapshots.py`,
+  `src/novy/presentation/http/snapshot_schemas.py`): activate snapshot, hosted status under
+  `/api/v1/projects/{id}/activate` and `/status`. Wired into `main.py` and `composition.py`.
+  Ruff and mypy clean.
+- [x] Phase 5 Step 10 — Web coordination: documented in PHASE_5_PLAN.md. Replace simulated publish
+  and unsafe preview persistence through coordinated work with web team.
+- [x] Phase 5 Step 11 — Indexes and migrations: `snapshots_v1` migration
+  (`src/novy/infrastructure/migrations/snapshots_v1.py`). Ruff and mypy clean.
+- [x] Phase 5 Step 12 — Tests: domain validation, snapshots, policy, handoff, app identity models.
+  696 passed, 3 skipped.
+- [x] Phase 5 Step 13 — Verification: full backend suite (696 passed), ruff check, ruff format,
+  mypy src tests all clean.
+- [x] Phase 5 Step 14 — Documentation: PROGRESS.md updated, PHASE_5_PLAN.md created.
+- [x] Phase 5 Step 5 — Handoff grant domain (`src/novy/domain/handoff.py`): `HandoffGrant`,
+  `is_expired`, `is_consumable`. Ruff and mypy clean.
+- [x] Phase 5 Step 6 — App identity domain (`src/novy/domain/app_identity.py`): `AppUserIdentity`,
+  `ProjectMembership`. Separate from builder identity. Ruff and mypy clean.
 - [ ] Isolated preview data, strict preview validation, hosted runtime, and project access rules.
 - [ ] Verified Vercel deployment and same-origin routing through a real browser.
 

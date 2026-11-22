@@ -11,6 +11,7 @@ from novy.composition import (
     create_csrf_service,
     create_import_service,
     create_project_service,
+    create_snapshot_service,
 )
 from novy.infrastructure.mongodb import PLATFORM_DATABASE_NAME, create_mongo_client
 from novy.infrastructure.settings import Settings
@@ -18,6 +19,7 @@ from novy.presentation.http.auth import router as auth_router
 from novy.presentation.http.errors import install_error_handlers
 from novy.presentation.http.health import router as health_router
 from novy.presentation.http.projects import router as projects_router
+from novy.presentation.http.snapshots import router as snapshots_router
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +57,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 if application.state.platform_database is not None
                 else None
             )
+            application.state.snapshot_service = (
+                create_snapshot_service(application.state.platform_database)
+                if application.state.platform_database is not None
+                else None
+            )
             if (
                 sessions is not None
                 and settings.supabase_url is not None
@@ -76,6 +83,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             application.state.csrf_service = None
             application.state.project_service = None
             application.state.import_service = None
+            application.state.snapshot_service = None
             application.state.mongo_client = None
             application.state.platform_database = None
             if http_client is not None:
@@ -103,6 +111,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(projects_router, prefix="/api/v1")
+    app.include_router(snapshots_router, prefix="/api/v1")
     return app
 
 
