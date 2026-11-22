@@ -124,6 +124,17 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
 - [x] Phase 5 Step 13 — Verification: full backend suite (696 passed), ruff check, ruff format,
   mypy src tests all clean.
 - [x] Phase 5 Step 14 — Documentation: PROGRESS.md updated, PHASE_5_PLAN.md created.
+- [x] MongoDB database name is now extracted from the connection string URI path
+  (`src/novy/infrastructure/mongodb.py`: `database_name_from_connection_string`), falling back to
+  `platform_db` when no database is specified. Updated `src/novy/main.py` lifespan to use it.
+  Enables separate databases per environment (e.g., `platform_db_preview`, `platform_db_dev`)
+  without code changes. All tests pass.
+- [x] Fixed `max_time_ms` incompatibility in `MongoProjectRepository` — removed unsupported
+  `max_time_ms` kwarg from `find_one`, `find`, `find_one_and_update`, `count_documents`,
+  `update_one` calls. Fixed `_require_indexes` hidden-field check (`None is False` → `not ...`).
+- [x] Added live integration test `tests/integration/test_projects_live.py` with
+  `--verify-projects-db` flag. Tests real MongoDB project CRUD, CAS, rename, delete, tombstone,
+  cross-owner rejection, and projectType round-trip. 2 passed against Atlas.
 - [x] Phase 5 Step 5 — Handoff grant domain (`src/novy/domain/handoff.py`): `HandoffGrant`,
   `is_expired`, `is_consumable`. Ruff and mypy clean.
 - [x] Phase 5 Step 6 — App identity domain (`src/novy/domain/app_identity.py`): `AppUserIdentity`,

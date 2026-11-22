@@ -72,11 +72,11 @@ class MongoProjectRepository:
             indexes = await self._write_collection.index_information()
             index = indexes.get(PROJECTS_OWNER_UPDATED_INDEX)
             if isinstance(index, dict):
-                valid = (
-                    index.get("key")
-                    == [("owner_id", ASCENDING), ("updated_at", ASCENDING), ("_id", ASCENDING)]
-                    and index.get("hidden", False) is False
-                )
+                valid = index.get("key") == [
+                    ("owner_id", ASCENDING),
+                    ("updated_at", ASCENDING),
+                    ("_id", ASCENDING),
+                ] and not index.get("hidden", False)
         except Exception:
             pass
         if not valid:
@@ -160,7 +160,6 @@ class MongoProjectRepository:
         try:
             document = await self._read_collection.find_one(
                 {"_id": oid, "owner_id": owner_id},
-                max_time_ms=_MAX_TIME_MS,
             )
         except (PyMongoError, BSONError):
             raise ProjectStoreError() from None
@@ -184,7 +183,7 @@ class MongoProjectRepository:
                 pass
         try:
             cursor_result = (
-                self._read_collection.find(query, max_time_ms=_MAX_TIME_MS)
+                self._read_collection.find(query)
                 .sort([("updated_at", -1), ("_id", 1)])
                 .limit(limit)
             )
@@ -244,7 +243,6 @@ class MongoProjectRepository:
                 filter_doc,
                 update_doc,
                 return_document=True,
-                max_time_ms=_MAX_TIME_MS,
             )
         except (PyMongoError, BSONError):
             raise ProjectStoreError() from None
@@ -278,7 +276,6 @@ class MongoProjectRepository:
                 {"_id": oid, "owner_id": owner_id, "lifecycle_state": {"$ne": LIFECYCLE_DELETED}},
                 {"$set": {"name": new_name, "updated_at": now}},
                 return_document=True,
-                max_time_ms=_MAX_TIME_MS,
             )
         except (PyMongoError, BSONError):
             raise ProjectStoreError() from None
@@ -319,7 +316,6 @@ class MongoProjectRepository:
         try:
             count = await self._read_collection.count_documents(
                 {"_id": oid, "owner_id": owner_id},
-                max_time_ms=_MAX_TIME_MS,
             )
         except (PyMongoError, BSONError):
             raise ProjectStoreError() from None

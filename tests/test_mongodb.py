@@ -14,8 +14,8 @@ from pymongo.errors import PyMongoError
 from novy.infrastructure import mongodb
 from novy.infrastructure.settings import Settings
 
-URI = "mongodb://synthetic-user:synthetic-password@localhost:27017/platform"
-SRV_URI = "mongodb+srv://synthetic-user:synthetic-password@cluster.example.test/platform"
+URI = "mongodb://synthetic-user:synthetic-password@localhost:27017"
+SRV_URI = "mongodb+srv://synthetic-user:synthetic-password@cluster.example.test"
 
 
 def reject_network(*args: object, **kwargs: object) -> NoReturn:

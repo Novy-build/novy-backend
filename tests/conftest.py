@@ -20,3 +20,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="Authorize builder session verification in an isolated platform_db collection",
     )
+    parser.addoption(
+        "--verify-projects-db",
+        action="store_true",
+        default=False,
+        help="Authorize project verification in an isolated platform_db collection",
+    )

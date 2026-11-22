@@ -13,7 +13,11 @@ from novy.composition import (
     create_project_service,
     create_snapshot_service,
 )
-from novy.infrastructure.mongodb import PLATFORM_DATABASE_NAME, create_mongo_client
+from novy.infrastructure.mongodb import (
+    PLATFORM_DATABASE_NAME,
+    create_mongo_client,
+    database_name_from_connection_string,
+)
 from novy.infrastructure.settings import Settings
 from novy.presentation.http.auth import router as auth_router
 from novy.presentation.http.errors import install_error_handlers
@@ -35,9 +39,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         http_client: httpx2.AsyncClient | None = None
         try:
             application.state.mongo_client = client
-            application.state.platform_database = (
-                client[PLATFORM_DATABASE_NAME] if client is not None else None
-            )
+            if client is not None and connection_string is not None:
+                db_name = database_name_from_connection_string(connection_string)
+            else:
+                db_name = PLATFORM_DATABASE_NAME
+            application.state.platform_database = client[db_name] if client is not None else None
+            application.state.platform_database_name = db_name
             sessions = (
                 create_builder_session_service(application.state.platform_database, settings)
                 if application.state.platform_database is not None
@@ -86,6 +93,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             application.state.snapshot_service = None
             application.state.mongo_client = None
             application.state.platform_database = None
+            application.state.platform_database_name = None
             if http_client is not None:
                 try:
                     await http_client.aclose()
