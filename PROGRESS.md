@@ -7,6 +7,10 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
 
 ## Workspace Status
 
+- [x] Index migrations now use the database name from `MONGODB_CONNECTION_STRING`, matching the
+  application lifespan and preventing missing-index failures on per-environment databases.
+- [x] `ProjectResponse` carries a top-level `screens` array from the project draft, matching the
+  frontend project response DTO. Project creation and editor loading no longer fail validation.
 - [x] Reviewed the available product and integration handoff, including the sibling web
   application's DTOs, repositories, mappers, validation, and tests.
 - [x] Established backend-specific engineering rules in `AGENTS.md`.

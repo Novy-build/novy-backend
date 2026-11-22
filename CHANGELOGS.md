@@ -5,6 +5,19 @@ first, and retain previous entries as project history.
 
 ## Unreleased
 
+### 2026-11-22 - Frontend integration contract fixes
+
+#### Fixed
+- Migration entrypoints now provision indexes in the database selected by `MONGODB_CONNECTION_STRING`
+  (for example `platform_db_dev`) instead of the hardcoded `platform_db`.
+- `ProjectResponse` now includes a top-level `screens` array copied from the project draft, matching
+  the frontend `ProjectResponseDTO`. Project creation and editor loading no longer fail client-side
+  validation even though the backend write succeeded.
+
+#### Verified
+- 699 tests passed, 4 live integration tests skipped.
+- Ruff check and mypy (src + tests): clean.
+
 ### 2026-11-22 - Phase 6 release readiness (partial)
 
 #### Added

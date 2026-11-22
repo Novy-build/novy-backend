@@ -5,7 +5,7 @@ from typing import Any
 
 from pymongo.asynchronous.collection import AsyncCollection
 
-from novy.infrastructure.mongodb import PLATFORM_DATABASE_NAME, create_mongo_client
+from novy.infrastructure.mongodb import create_mongo_client, database_name_from_connection_string
 from novy.infrastructure.settings import Settings
 from novy.infrastructure.snapshots import SNAPSHOTS_COLLECTION
 
@@ -23,7 +23,8 @@ async def _provision() -> None:
         raise RuntimeError("MongoDB connection is not configured")
     client = create_mongo_client(settings.mongodb_connection_string)
     try:
-        collection = client[PLATFORM_DATABASE_NAME][SNAPSHOTS_COLLECTION]
+        db_name = database_name_from_connection_string(settings.mongodb_connection_string)
+        collection = client[db_name][SNAPSHOTS_COLLECTION]
         await ensure_snapshot_indexes(collection)
     finally:
         await client.close()

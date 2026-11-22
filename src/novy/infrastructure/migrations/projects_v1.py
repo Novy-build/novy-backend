@@ -6,7 +6,7 @@ from typing import Any
 from pymongo import ASCENDING
 from pymongo.asynchronous.collection import AsyncCollection
 
-from novy.infrastructure.mongodb import PLATFORM_DATABASE_NAME, create_mongo_client
+from novy.infrastructure.mongodb import create_mongo_client, database_name_from_connection_string
 from novy.infrastructure.projects import PROJECTS_COLLECTION, PROJECTS_OWNER_UPDATED_INDEX
 from novy.infrastructure.settings import Settings
 
@@ -24,7 +24,8 @@ async def _provision() -> None:
         raise RuntimeError("MongoDB connection is not configured")
     client = create_mongo_client(settings.mongodb_connection_string)
     try:
-        collection = client[PLATFORM_DATABASE_NAME][PROJECTS_COLLECTION]
+        db_name = database_name_from_connection_string(settings.mongodb_connection_string)
+        collection = client[db_name][PROJECTS_COLLECTION]
         await ensure_project_indexes(collection)
     finally:
         await client.close()

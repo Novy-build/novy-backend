@@ -244,6 +244,9 @@ async def delete_project(project_id: str, request: Request) -> Response:
 
 
 def _to_response(view: Any) -> ProjectResponse:
+    draft = view.draft
+    content = draft if isinstance(draft, dict) else getattr(draft, "content", {})
+    screens = content.get("screens", []) if isinstance(content, dict) else []
     return ProjectResponse(
         id=view.id,
         name=view.name,
@@ -252,6 +255,7 @@ def _to_response(view: Any) -> ProjectResponse:
         updatedAt=view.updated_at,
         schemaVersion=view.schema_version,
         revision=view.revision,
+        screens=screens if isinstance(screens, list) else [],
         lifecycleState=view.lifecycle_state,
         draft=view.draft,
     )

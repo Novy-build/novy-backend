@@ -15,6 +15,7 @@ class ProjectResponse(BaseModel):
     updatedAt: str
     schemaVersion: int
     revision: int
+    screens: list[object] = []
     lifecycleState: str = "active"
     draft: dict[str, object] = {}
 

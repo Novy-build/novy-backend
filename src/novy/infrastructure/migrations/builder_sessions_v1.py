@@ -13,7 +13,7 @@ from novy.infrastructure.builder_sessions import (
     DIGEST_INDEX,
     TTL_INDEX,
 )
-from novy.infrastructure.mongodb import PLATFORM_DATABASE_NAME, create_mongo_client
+from novy.infrastructure.mongodb import create_mongo_client, database_name_from_connection_string
 from novy.infrastructure.settings import Settings
 
 
@@ -30,7 +30,8 @@ async def _provision() -> None:
         raise RuntimeError("MongoDB connection is not configured")
     client = create_mongo_client(settings.mongodb_connection_string)
     try:
-        collection = client[PLATFORM_DATABASE_NAME][BUILDER_SESSIONS_COLLECTION]
+        db_name = database_name_from_connection_string(settings.mongodb_connection_string)
+        collection = client[db_name][BUILDER_SESSIONS_COLLECTION]
         await ensure_builder_session_indexes(collection)
     finally:
         await client.close()
