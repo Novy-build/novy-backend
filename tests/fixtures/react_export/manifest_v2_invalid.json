@@ -1,0 +1,38 @@
+{
+  "manifestVersion": 1,
+  "generatedAt": "2026-11-24T00:00:00.000Z",
+  "project": {
+    "schemaVersion": 14,
+    "id": "project_1",
+    "name": "Invalid",
+    "projectType": "app",
+    "createdAt": "2026-11-01T00:00:00.000Z",
+    "updatedAt": "2026-11-24T00:00:00.000Z",
+    "screens": [
+      {
+        "id": "screen_home",
+        "name": "Home",
+        "path": "/",
+        "nodes": [],
+        "behaviors": [
+          { "id": "behavior_missing", "name": "Missing graph", "event": "click", "graphId": "graph_missing", "targetNodeId": "node_missing" }
+        ],
+        "logicGraphs": []
+      }
+    ]
+  },
+  "layout": { "layoutVersion": 2, "screens": [] },
+  "appData": { "database": null, "collections": [], "recordsIncluded": true },
+  "runtime": {
+    "requirements": [
+      { "capability": "rag", "configurationOwner": "backend", "requiredBinding": "rag.knowledge-index", "requiredBy": ["node_missing"] }
+    ],
+    "routes": [{ "screenId": "screen_home", "path": "/" }],
+    "responsiveBreakpoints": { "tabletMinWidth": 768, "desktopMinWidth": 1024 }
+  },
+  "security": {
+    "secretsIncluded": true,
+    "rawMediaIncluded": false,
+    "biometricTemplatesIncluded": false
+  }
+}

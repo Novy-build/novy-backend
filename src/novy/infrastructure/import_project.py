@@ -22,6 +22,7 @@ from novy.application.import_project import (
     ImportStoreError,
 )
 from novy.infrastructure.projects import PROJECTS_COLLECTION
+from novy.infrastructure.reference_remap import remap_draft_references
 
 APP_DATABASES_COLLECTION = "app_databases"
 APP_COLLECTIONS_COLLECTION = "app_collections"
@@ -119,6 +120,9 @@ class MongoImportRepository:
                 screens = project_data.get("screens", [])
                 if not isinstance(screens, list):
                     screens = []
+                draft = remap_draft_references(
+                    {**draft_content, "screens": screens}, db_id_map, coll_id_map
+                )
 
                 project_doc = {
                     "_id": new_project_id,
@@ -126,7 +130,7 @@ class MongoImportRepository:
                     "name": project_data.get("name", "Imported Project"),
                     "created_at": now,
                     "updated_at": now,
-                    "draft": {"screens": screens, **draft_content},
+                    "draft": draft,
                     "schema_version": project_data.get("schemaVersion", 14),
                     "revision": 0,
                     "lifecycle_state": "active",

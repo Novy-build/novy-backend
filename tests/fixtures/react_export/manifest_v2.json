@@ -1,0 +1,290 @@
+{
+  "manifestVersion": 2,
+  "generatedAt": "2026-11-24T00:00:00.000Z",
+  "project": {
+    "schemaVersion": 14,
+    "id": "project_1",
+    "name": "Notes",
+    "projectType": "app",
+    "createdAt": "2026-11-01T00:00:00.000Z",
+    "updatedAt": "2026-11-24T00:00:00.000Z",
+    "screens": [
+      {
+        "id": "screen_home",
+        "name": "Home",
+        "path": "/",
+        "nodes": [
+          {
+            "id": "node_title",
+            "type": "text",
+            "name": "Title",
+            "x": 24,
+            "y": 24,
+            "w": 220,
+            "h": 36,
+            "props": { "text": "Notes", "level": "title" }
+          },
+          {
+            "id": "node_add",
+            "type": "button",
+            "name": "Add note",
+            "x": 24,
+            "y": 80,
+            "w": 120,
+            "h": 44,
+            "props": { "label": "Add note", "variant": "solid" }
+          },
+          {
+            "id": "node_list",
+            "type": "listview",
+            "name": "Notes list",
+            "x": 24,
+            "y": 150,
+            "w": 320,
+            "h": 300,
+            "props": {
+              "scrollDirection": "vertical",
+              "dataSource": {
+                "kind": "collection",
+                "collectionId": "collection_notes",
+                "displayFieldIds": ["field_title"]
+              }
+            },
+            "itemFrame": {
+              "id": "item_frame_notes",
+              "kind": "container",
+              "role": "repeated-item",
+              "constraints": { "crossAxis": "fill-listview", "mainAxis": "hug-content" },
+              "padding": { "mode": "all", "top": 8, "right": 8, "bottom": 8, "left": 8 },
+              "itemSpacing": 8,
+              "itemBorderRadius": 8,
+              "showDividers": true,
+              "recordIdentity": {
+                "collectionId": "collection_notes",
+                "key": "noteId",
+                "source": "record-id",
+                "generation": "backend"
+              },
+              "children": [
+                {
+                  "id": "item_title",
+                  "type": "text",
+                  "name": "Note title",
+                  "x": 8,
+                  "y": 8,
+                  "w": 200,
+                  "h": 24,
+                  "props": { "text": "Title", "level": "body" },
+                  "bindings": [
+                    { "target": "text.content", "value": { "source": "list-item", "fieldId": "field_title" } }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "behaviors": [
+          {
+            "id": "behavior_add",
+            "name": "Add note",
+            "event": "click",
+            "graphId": "graph_add",
+            "targetNodeId": "node_add"
+          }
+        ],
+        "logicGraphs": [
+          {
+            "id": "graph_add",
+            "name": "Add note flow",
+            "sourceNodeId": "trigger_add",
+            "purpose": "ui",
+            "nodes": [
+              { "kind": "trigger", "id": "trigger_add", "event": "click", "position": { "x": 80, "y": 160 } },
+              {
+                "kind": "action",
+                "id": "action_navigate",
+                "position": { "x": 320, "y": 160 },
+                "payload": { "type": "navigate", "targetScreenId": "screen_add", "recordContext": null }
+              }
+            ],
+            "edges": [
+              {
+                "id": "edge_add",
+                "fromNodeId": "trigger_add",
+                "fromPort": "next",
+                "toNodeId": "action_navigate",
+                "toPort": "in",
+                "kind": "control"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "screen_add",
+        "name": "Add note",
+        "path": "/add",
+        "nodes": [
+          {
+            "id": "node_save",
+            "type": "button",
+            "name": "Save",
+            "x": 24,
+            "y": 24,
+            "w": 120,
+            "h": 44,
+            "props": { "label": "Save", "variant": "solid" }
+          }
+        ],
+        "behaviors": [],
+        "logicGraphs": []
+      }
+    ]
+  },
+  "layout": {
+    "layoutVersion": 2,
+    "screens": [
+      {
+        "screenId": "screen_home",
+        "path": "/",
+        "nodes": [
+          {
+            "id": "node_title",
+            "type": "text",
+            "name": "Title",
+            "x": 24,
+            "y": 24,
+            "w": 220,
+            "h": 36,
+            "props": { "text": "Notes", "level": "title" }
+          },
+          {
+            "id": "node_add",
+            "type": "button",
+            "name": "Add note",
+            "x": 24,
+            "y": 80,
+            "w": 120,
+            "h": 44,
+            "props": { "label": "Add note", "variant": "solid" }
+          },
+          {
+            "id": "node_list",
+            "type": "listview",
+            "name": "Notes list",
+            "x": 24,
+            "y": 150,
+            "w": 320,
+            "h": 300,
+            "props": {
+              "scrollDirection": "vertical",
+              "dataSource": {
+                "kind": "collection",
+                "collectionId": "collection_notes",
+                "displayFieldIds": ["field_title"]
+              }
+            },
+            "itemFrame": {
+              "id": "item_frame_notes",
+              "kind": "container",
+              "role": "repeated-item",
+              "constraints": { "crossAxis": "fill-listview", "mainAxis": "hug-content" },
+              "padding": { "mode": "all", "top": 8, "right": 8, "bottom": 8, "left": 8 },
+              "itemSpacing": 8,
+              "itemBorderRadius": 8,
+              "showDividers": true,
+              "recordIdentity": {
+                "collectionId": "collection_notes",
+                "key": "noteId",
+                "source": "record-id",
+                "generation": "backend"
+              },
+              "children": [
+                {
+                  "id": "item_title",
+                  "type": "text",
+                  "name": "Note title",
+                  "x": 8,
+                  "y": 8,
+                  "w": 200,
+                  "h": 24,
+                  "props": { "text": "Title", "level": "body" },
+                  "bindings": [
+                    { "target": "text.content", "value": { "source": "list-item", "fieldId": "field_title" } }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "screenId": "screen_add",
+        "path": "/add",
+        "nodes": [
+          {
+            "id": "node_save",
+            "type": "button",
+            "name": "Save",
+            "x": 24,
+            "y": 24,
+            "w": 120,
+            "h": 44,
+            "props": { "label": "Save", "variant": "solid" }
+          }
+        ]
+      }
+    ]
+  },
+  "appData": {
+    "database": {
+      "id": "db_1",
+      "projectId": "project_1",
+      "name": "Data",
+      "createdAt": "2026-11-01T00:00:00.000Z",
+      "updatedAt": "2026-11-24T00:00:00.000Z"
+    },
+    "collections": [
+      {
+        "id": "collection_notes",
+        "projectId": "project_1",
+        "databaseId": "db_1",
+        "name": "Notes",
+        "fields": [
+          { "id": "field_title", "key": "title", "label": "Title", "type": "text", "required": true },
+          { "id": "field_content", "key": "content", "label": "Content", "type": "text", "required": false }
+        ],
+        "identifier": { "key": "noteId", "type": "string", "generation": "backend" },
+        "createdAt": "2026-11-01T00:00:00.000Z",
+        "updatedAt": "2026-11-24T00:00:00.000Z"
+      }
+    ],
+    "recordsIncluded": false
+  },
+  "runtime": {
+    "requirements": [
+      {
+        "capability": "deployment",
+        "configurationOwner": "backend",
+        "requiredBinding": "deployment.provider",
+        "requiredBy": ["project_1"]
+      },
+      {
+        "capability": "database",
+        "configurationOwner": "backend",
+        "requiredBinding": "data.repository",
+        "requiredBy": ["collection_notes", "node_list"]
+      }
+    ],
+    "routes": [
+      { "screenId": "screen_home", "path": "/" },
+      { "screenId": "screen_add", "path": "/add" }
+    ],
+    "responsiveBreakpoints": { "tabletMinWidth": 768, "desktopMinWidth": 1024 }
+  },
+  "security": {
+    "secretsIncluded": false,
+    "rawMediaIncluded": false,
+    "biometricTemplatesIncluded": false
+  }
+}

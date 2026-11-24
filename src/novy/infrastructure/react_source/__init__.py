@@ -1,0 +1,1 @@
+"""React source generation adapters."""

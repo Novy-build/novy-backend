@@ -12,7 +12,9 @@ from novy.composition import (
     create_csrf_service,
     create_import_service,
     create_project_service,
+    create_react_export_service,
     create_snapshot_service,
+    create_template_provisioning_service,
 )
 from novy.infrastructure.mongodb import (
     PLATFORM_DATABASE_NAME,
@@ -23,6 +25,12 @@ from novy.infrastructure.settings import Settings
 from novy.presentation.http.app_data import router as app_data_router
 from novy.presentation.http.auth import router as auth_router
 from novy.presentation.http.errors import install_error_handlers
+from novy.presentation.http.exports import (
+    ExportBodyLimitMiddleware,
+)
+from novy.presentation.http.exports import (
+    router as exports_router,
+)
 from novy.presentation.http.health import router as health_router
 from novy.presentation.http.projects import router as projects_router
 from novy.presentation.http.snapshots import router as snapshots_router
@@ -66,6 +74,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 if application.state.platform_database is not None
                 else None
             )
+            application.state.template_provisioning_service = (
+                create_template_provisioning_service(application.state.platform_database)
+                if application.state.platform_database is not None
+                else None
+            )
             application.state.app_data_repositories = (
                 create_app_data_repositories(application.state.platform_database)
                 if application.state.platform_database is not None
@@ -75,6 +88,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 create_snapshot_service(application.state.platform_database)
                 if application.state.platform_database is not None
                 else None
+            )
+            application.state.react_export_service = create_react_export_service(
+                application.state.project_service
             )
             if (
                 sessions is not None
@@ -97,8 +113,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             application.state.csrf_service = None
             application.state.project_service = None
             application.state.import_service = None
+            application.state.template_provisioning_service = None
             application.state.app_data_repositories = None
             application.state.snapshot_service = None
+            application.state.react_export_service = None
             application.state.mongo_client = None
             application.state.platform_database = None
             application.state.platform_database_name = None
@@ -123,12 +141,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.settings = settings
+    app.add_middleware(ExportBodyLimitMiddleware)
     install_error_handlers(app)
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(projects_router, prefix="/api/v1")
     app.include_router(app_data_router, prefix="/api/v1")
     app.include_router(snapshots_router, prefix="/api/v1")
+    app.include_router(exports_router, prefix="/api/v1")
     return app
 
 

@@ -52,9 +52,13 @@ evidence that production AI or an admin console is in scope.
 
 ### Non-goals and future scope
 
-- Standalone downloadable source/export, external application deployments, per-project build
-  pipelines, production AI generation, RAG, and biometric processing are deferred. Frontend source
-  export code and simulation UI do not make those capabilities available; do not advertise them.
+- Standalone downloadable source/export was implemented as a separate assignment on 2026-11-24
+  (`POST /api/v1/exports/react`, manifest v2 -> React/Vite ZIP; see `PROGRESS.md`). It is a pure,
+  offline generator: no provider calls, no database writes, no records/secrets/media/biometric
+  templates, and deferred capabilities (RAG, computer-vision, authentication) still fail closed.
+  External application deployments, per-project build pipelines, production AI generation, RAG, and
+  biometric processing remain deferred. Frontend source export code and simulation UI do not make
+  those capabilities available; do not advertise them.
 - V1 activates hosted prototype snapshots against the preview environment. It does not deploy or
   activate a live application; the live data boundary must still prevent access from prototypes.
 - Unsupported email, camera, AI, RAG, biometric, or other actions must not silently become working

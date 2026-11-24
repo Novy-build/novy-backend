@@ -16,6 +16,7 @@ from pymongo.errors import PyMongoError
 
 from novy.application.duplicate import DuplicateStoreError
 from novy.infrastructure.projects import PROJECTS_COLLECTION
+from novy.infrastructure.reference_remap import remap_draft_references
 
 APP_DATABASES_COLLECTION = "app_databases"
 APP_COLLECTIONS_COLLECTION = "app_collections"
@@ -174,40 +175,5 @@ class MongoDuplicateRepository:
 def _remap_draft(
     draft: dict[str, Any], db_id_map: dict[str, str], coll_id_map: dict[str, str]
 ) -> dict[str, Any]:
-    """Remap typed references in the draft.
-
-    Rewrites known collection/database references using the ID maps.
-    Preserves arbitrary text, dynamic expressions (e.g. ``$recordId``),
-    and unknown fields. Concrete record IDs are NOT remapped unless
-    the referenced record was copied (handled separately).
-    """
-    import copy
-
-    result = copy.deepcopy(draft)
-
-    def _remap_value(value: Any) -> Any:
-        if isinstance(value, dict):
-            new: dict[str, Any] = {}
-            for key, val in value.items():
-                # Remap known collection reference fields
-                if key in (
-                    "collectionId",
-                    "collection_id",
-                    "listSourceCollectionId",
-                ) and isinstance(val, str):
-                    new[key] = coll_id_map.get(val, val)
-                elif key in ("databaseId", "database_id") and isinstance(val, str):
-                    new[key] = db_id_map.get(val, val)
-                else:
-                    new[key] = _remap_value(val)
-            return new
-        if isinstance(value, list):
-            return [_remap_value(item) for item in value]
-        # Preserve strings as-is (including dynamic expressions like $recordId
-        # and arbitrary ID-looking text)
-        return value
-
-    remapped = _remap_value(result)
-    if not isinstance(remapped, dict):
-        return result
-    return remapped
+    """Remap typed references using the shared, duplicate-compatible helper."""
+    return remap_draft_references(draft, db_id_map, coll_id_map)

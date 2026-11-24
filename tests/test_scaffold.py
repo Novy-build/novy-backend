@@ -87,6 +87,7 @@ def test_nonproduction_docs_only_document_liveness(
         "/api/v1/projects/{project_id}/collections/{collection_id}/records/{record_id}",
         "/api/v1/projects/{project_id}/activate",
         "/api/v1/projects/{project_id}/status",
+        "/api/v1/exports/react",
     }
     assert set(paths["/api/v1/health/live"]) == {"get"}
     assert redoc.status_code == 404

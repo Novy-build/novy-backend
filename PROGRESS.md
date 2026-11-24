@@ -1,12 +1,21 @@
 # Novy Backend Progress
 
-**Last reviewed:** 2026-11-22
+**Last reviewed:** 2026-11-25
 
 This is the current-state inventory for the backend workspace. Planned work is not implemented work;
 see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
 
 ## Workspace Status
 
+- [x] Template creation is provisioned atomically: `POST /api/v1/projects` with a template now uses
+  `TemplateProvisioningService` to allocate fresh collection/ObjectIds, remap every typed
+  collection reference in the project draft, and store the template's record-identity key.
+  Template reference aliases no longer remain dangling in logic nodes.
+- [x] Project import now remaps typed collection/database references in the imported draft using the
+  same shared helper as duplication and template provisioning; imported logic references resolve to
+  the new collection IDs.
+- [x] Extracted `reference_remap.py` as the single typed-reference remapper; duplication delegates to
+  it without behavior changes.
 - [x] Removed unsupported `max_time_ms` from app-data Mongo operations; schema saves no longer fail
   with `findAndModify.max_time_ms is an unknown field`.
 - [x] Owner-scoped project data HTTP routes are wired: `/app-data` snapshot plus database,
@@ -161,21 +170,70 @@ see `BACKEND_PLAN.md` for the approved architecture and delivery sequence.
   `ProjectMembership`. Separate from builder identity. Ruff and mypy clean.
 - [ ] Isolated preview data, strict preview validation, hosted runtime, and project access rules.
 - [ ] Verified Vercel deployment and same-origin routing through a real browser.
+- [ ] Planned (not implemented): generated-app runtime workstream (immutable app versions,
+  `/runtime/v1` action APIs, preview preparation/reset, and a hosted/local preview surface). The
+  proposed phased design is in `RUNTIME_EXPORT_PLAN.md`; the ordered, file-by-file work breakdown
+  with per-step acceptance checks is in `RUNTIME_EXPORT_STEPS.md`. This is planned work, not
+  evidence that any runtime endpoint exists. The **offline React source generator is implemented**
+  as C3 (see "React export implementation (C3)" below); it is not part of this pending workstream.
+
+## React export implementation (C3) — 2026-11-24
+
+Scope: implement the frontend's `POST /api/v1/exports/react` contract in this backend. The design is
+in `C:\Users\oguhn\.opencode\plan\react-export-implementation-plan.md` and the execution checklist is
+in `C:\Users\oguhn\.opencode\plan\react-export-step-by-step.md`. This is a deliberate scope change:
+`BACKEND_PLAN.md` previously deferred standalone source export.
+
+- [x] Step 0 — Baseline captured before any code change. Backend: 701 passed, 4 live integration
+  tests skipped; Ruff clean; mypy clean on 62 source files. Frontend: typecheck clean, 1169 tests
+  passed across 145 files, production build succeeded. Pre-existing uncommitted backend changes
+  (`CHANGELOGS.md`, `PROGRESS.md`, `RUNTIME_EXPORT_PLAN.md`, `RUNTIME_EXPORT_STEPS.md`) were left
+  untouched; new entries are appended only.
+- [x] Step 1 — Contract fixtures captured under `tests/fixtures/react_export/`. `manifest_v2.json`
+  mirrors the frontend `GeneratedAppManifestDTO` with schema-v14 project, two screens, a Button, a
+  collection-bound ListView with a repeated item frame and field binding, one behavior/graph,
+  collections metadata, capabilities, routes and breakpoints. `manifest_v2_invalid.json` exercises
+  wrong version, `recordsIncluded: true`, `secretsIncluded: true`, a deferred RAG capability and a
+  dangling behavior graph. Both fixtures contain no records, credentials or media.
+- [x] Step 2 — Domain layer added: `src/novy/domain/generation.py` (value objects, safe error types,
+  component/action/capability allowlists, path and name helpers) and
+  `src/novy/domain/manifest_validation.py` (strict v2 validation, privacy fail-closed, reused shared
+  project validators, layout/route/data/capability consistency, deferred-action detection).
+  `tests/test_generation_manifest_validation.py` has 29 passing cases; Ruff and mypy are clean.
+- [x] Step 3 — Generator and archive adapter added: `src/novy/infrastructure/react_source/` with
+  static scaffold templates, a deterministic React/Vite source generator (routes, tokens,
+  collections, screens, repeated item bindings, behavior functions, runtime client) and a
+  deterministic ZIP writer with fixed timestamps and size/path guards. 14 golden/determinism/ZIP
+  tests pass; Ruff and mypy are clean.
+- [x] Step 4 — Application use case added: `src/novy/application/react_export.py` with
+  `ReactExportService` (validate → owner check → rate limit → generate → ZIP under a 25 s deadline),
+  typed generator/archive protocols, safe error types and a result DTO. 7 use-case tests pass;
+  Ruff and mypy are clean.
+- [x] Step 5 — HTTP surface and wiring added: `src/novy/presentation/http/export_schemas.py`,
+  `exports.py` (`POST /api/v1/exports/react`, CSRF/origin guards, body-size middleware, error
+  translation to frontend codes, ZIP response), `create_react_export_service`, lifespan wiring,
+  and router inclusion. 11 HTTP contract tests pass. Ruff and mypy clean.
+- [x] Step 6 — Documentation and bookkeeping updated: `BACKEND_PLAN.md` records the approved scope
+  change; `PROGRESS.md` and `CHANGELOGS.md` record implementation and verification; root
+  `FEATURE_MATRIX.md` moves C3 to A. No frontend files were changed.
+- [x] Step 7 — Full verification passed: backend 762 tests passed, 4 skipped; Ruff and mypy clean.
+  Frontend typecheck clean; prior full test/build baseline remained unchanged (no frontend edits).
 
 The implementation covers the application foundation, MongoDB client lifecycle, internal
 builder-profile and session components, CSRF protection, and Supabase Auth integration. The
 builder-profile and session collections and indexes were provisioned on `platform_db`. Authentication
 routes (`/auth/csrf`, `/auth/register`, `/auth/login`, `/auth/session`, `/auth/refresh`,
 `/auth/logout`) and CSRF/origin guards are implemented and unit-tested, but no real profile or
-browser session has been provisioned against live Supabase. There are no project APIs, hosted
-prototypes, or real-browser verification yet. Historical frontend documents describe other contexts
+browser session has been provisioned against live Supabase. Project and app-data APIs, snapshot endpoints, and the offline React export endpoint are implemented
+and unit-tested. There are no hosted prototypes or real-browser verification yet. Historical frontend documents describe other contexts
 and are not evidence of working backend features here.
 
 ## Approved Direction
 
 - **Stack:** FastAPI, MongoDB Atlas (`platform_db`), Supabase Auth, Clean Architecture, and Vercel.
 - **First release:** hosted prototypes activate and write only preview data; live application
-  activation, standalone export, and external deployments are deferred.
+  activation and external deployments are deferred. Standalone React source export was approved as
+  a scope change and implemented as C3 on 2026-11-24 (see "React export implementation (C3)" above).
 - **Authentication:** separate builder and shared app-user identity realms, server-side opaque
   sessions, session-bound CSRF bootstrap, explicit refresh, and current `is_active` checks for every
   applicable account and project/environment membership.
@@ -188,6 +246,16 @@ and are not evidence of working backend features here.
   MongoDB ObjectIds for imported persisted resources with typed reference remapping.
 
 These are approved decisions and future work, not completed features.
+
+Verified on 2026-11-25 for template/import reference remapping:
+
+- `uv run pytest -q` — 769 passed, 4 skipped (7 new tests across `test_reference_remap.py`,
+  `test_template_provisioning.py`, `test_import_reference_remap.py`, and `test_template_create_http.py`).
+- `uv run ruff check src tests` — passed; `uv run ruff format --check` — passed on all changed files.
+- `uv run mypy` — clean on the 12 changed/new source and test files. The full `mypy src tests` run
+  still reports 4 pre-existing errors in three earlier React-export test files
+  (`test_generation_manifest_validation.py`, `test_react_export_application.py`,
+  `test_react_export_http.py`); none are in the files changed for this work.
 
 ## Verification
 

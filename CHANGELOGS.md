@@ -5,6 +5,158 @@ first, and retain previous entries as project history.
 
 ## Unreleased
 
+### 2026-11-25 — Template and import reference remapping
+
+#### Added
+- `src/novy/infrastructure/reference_remap.py`: one typed draft remapper for collection/database
+  references, preserving field IDs, dynamic expressions, unknown fields, and the original draft.
+- `create_template_provisioning_service` in `composition.py` and lifespan wiring in `main.py`;
+  template creation now provisions databases, collections, sample records, and a remapped draft.
+- Seven regression tests covering recursive remapping, duplicate delegation, template alias
+  remapping with record identifiers, import draft remapping, and the template create HTTP route.
+
+#### Changed
+- `TemplateCollection` carries `reference_id` and `identifier`; the provisioning store allocates
+  collection IDs from those aliases before storing the remapped draft and persists the record
+  identity. Duplicate/empty reference IDs are rejected.
+- `infrastructure/duplicate.py` delegates to the shared remapper instead of its private copy.
+- `infrastructure/import_project.py` remaps the imported draft before inserting the project.
+- `presentation/http/projects.py` routes template payloads through the provisioning service and
+  translates provisioning errors to the existing safe API envelope.
+
+#### Verified
+- `uv run pytest -q` — 769 passed, 4 skipped; `uv run ruff check src tests` — passed; formatting
+  checked on all changed files; `uv run mypy` clean on the 12 changed/new files. The full mypy run
+  retains four pre-existing errors in earlier React-export test files, unchanged by this work.
+
+### 2026-11-24 — Export status documentation reconciliation
+
+#### Changed
+- `RUNTIME_EXPORT_PLAN.md`: the status header, §1.1 "Download React app" row, §2 current state, and
+  the §5 Phase 3 note now state that the offline C3 React export is implemented while the immutable
+  app-version, `/runtime/v1`, preview, and hosted-renderer workstream remains planned.
+- `PROGRESS.md`: the pending workstream entry, the stale "no project APIs" summary, and the Approved
+  Direction no longer describe standalone export as deferred or unimplemented.
+
+#### Verified
+- Documentation-only change; no source files touched. The recorded backend baseline remains 762
+  tests passed, 4 skipped, Ruff and mypy clean (`PROGRESS.md`).
+
+### 2026-11-24 - React export: documentation and verification
+
+#### Changed
+- `BACKEND_PLAN.md`: records the approved scope change for standalone React source export.
+- Root `FEATURE_MATRIX.md`: moves C3 (React source export) from "Backend missing" to "Both".
+- `PROGRESS.md`: records Steps 0-6 completion and verification results.
+
+#### Verified
+- Documentation-only change after a full passing backend run: 762 tests passed, 4 skipped, Ruff and
+  mypy clean.
+
+### 2026-11-24 - React export: HTTP surface and wiring
+
+#### Added
+- `src/novy/presentation/http/export_schemas.py` and `exports.py`: `POST /api/v1/exports/react`
+  with CSRF/origin guards, a body-size middleware, error translation to frontend codes, and a ZIP
+  response.
+- `create_react_export_service` composition factory and lifespan wiring in `main.py`.
+- `tests/test_react_export_http.py`: 11 HTTP contract tests.
+
+#### Verified
+- 11 tests passed; Ruff clean; mypy clean on the changed HTTP and composition files.
+- Full backend suite: 762 passed, 4 skipped; Ruff and mypy clean.
+
+### 2026-11-24 - React export: application use case
+
+#### Added
+- `src/novy/application/react_export.py`: `ReactExportService` with generator/archive protocols,
+  owner-scoped authorization, rate limiting, a 25-second deadline and safe application errors.
+- 7 use-case tests covering ordering, ownership, unavailable dependencies, rate limiting, timeout,
+  and validation/capability short-circuiting.
+
+#### Verified
+- 7 tests passed; Ruff clean; mypy clean on the new application module.
+
+### 2026-11-24 - React export: generator and ZIP writer
+
+#### Added
+- `src/novy/infrastructure/react_source/templates/`: checked-in static React/Vite scaffold files.
+- `generator.py`: deterministic source generation for routes, design tokens, collection metadata,
+  screens with repeated ListView item bindings, behavior functions and a browser runtime client.
+- `zip_archive.py`: deterministic ZIP assembly with fixed timestamps, sorted paths and a size guard.
+- 14 golden, determinism and ZIP tests.
+
+#### Verified
+- 14 tests passed; Ruff clean; mypy clean on the new infrastructure modules.
+
+### 2026-11-24 - React export: domain validation
+
+#### Added
+- `src/novy/domain/generation.py`: pure generated-source value objects, safe error types, component,
+  action and capability allowlists, and path/name helpers.
+- `src/novy/domain/manifest_validation.py`: strict v2 manifest validation with privacy fail-closed
+  checks, project/layout/route/data consistency, capability policy and deferred-action detection.
+- `tests/test_generation_manifest_validation.py`: 29 focused validation tests.
+
+#### Verified
+- 29 tests passed; Ruff clean; mypy clean on the new domain modules.
+
+### 2026-11-24 - React export: contract fixtures
+
+#### Added
+- `tests/fixtures/react_export/manifest_v2.json` and `manifest_v2_invalid.json`: a realistic v2
+  handoff payload derived from the frontend DTOs plus an invalid variant for validator tests.
+
+#### Verified
+- Fixture-only change; no endpoints or behavior were added.
+
+### 2026-11-24 - React export: baseline verification
+
+#### Verified
+- Captured pre-change quality gates in both repositories: backend 701 tests passed with 4 live
+  integration tests skipped, Ruff clean, mypy clean on 62 source files; frontend typecheck clean,
+  1169 tests passed across 145 files, and production build succeeded. No code was changed.
+- Pre-existing uncommitted backend documentation changes were preserved.
+
+### 2026-11-24 - Runtime/export implementation steps
+
+#### Added
+- `RUNTIME_EXPORT_STEPS.md`: ordered, file-by-file implementation checklist derived from
+  `RUNTIME_EXPORT_PLAN.md`. Steps 0-29 cover contract freeze, manifest validation and immutable app
+  versions, `/runtime/v1` action APIs with idempotent CRUD/email, the React source generator, hosted
+  and local preview paths, security/Atlas verification, and the final quality gate. Each step lists
+  concrete files, behavior, tests, and a done-when checklist.
+- `PROGRESS.md` now points to both the design plan and the step breakdown as planned work.
+
+#### Verified
+- Documentation-only change; no code, tests, or endpoints were added or run.
+
+### 2026-11-24 - Runtime/export plan: exportability clarification
+
+#### Added
+- Section 1.1 in `RUNTIME_EXPORT_PLAN.md` compares what is exportable today (definition only:
+  manifest JSON with layout/logic/data schemas) against the planned result (a runnable app with a
+  renderer, logic engine, and server-scoped database), and clarifies that records are not shipped
+  in the export.
+
+#### Verified
+- Documentation-only change; no code, tests, or endpoints were added or run.
+
+### 2026-11-24 - Generated-app runtime and export plan (planning only)
+
+#### Added
+- `RUNTIME_EXPORT_PLAN.md`: proposed phased implementation plan for immutable app versions,
+  owner-scoped preview data snapshots, `/runtime/v1` action APIs (records, execute, CRUD, email),
+  `POST /api/v1/exports/react` source generation, and a hosted/shared preview surface so an
+  exported app has working logic and a scoped database.
+- The plan preserves the frontend wire contract from `../novy-web/ROADMAP.md` while resolving the
+  stack mismatch in favor of the existing MongoDB/PyMongo backend, and records RAG, biometrics, and
+  provider deployment as deferred future work.
+- `PROGRESS.md` now lists this workstream as planned, not implemented.
+
+#### Verified
+- Documentation-only change; no code, tests, or endpoints were added or run.
+
 ### 2026-11-22 - Project data HTTP APIs
 
 #### Fixed

@@ -19,6 +19,13 @@ from novy.application.projects import (
     ProjectService,
     ProjectStoreError,
 )
+from novy.application.template_provisioning import (
+    TemplateBlueprint,
+    TemplateCollection,
+    TemplateDatabase,
+    TemplateProvisioningError,
+    TemplateProvisioningService,
+)
 from novy.domain.projects import (
     ProjectConflictError,
     ProjectDataError,
@@ -54,6 +61,74 @@ def _import_service(request: Request) -> ImportService:
     return service
 
 
+def _template_provisioning_service(request: Request) -> TemplateProvisioningService:
+    service = getattr(request.app.state, "template_provisioning_service", None)
+    if not isinstance(service, TemplateProvisioningService):
+        raise api_error(503, "projects_unavailable", "Project service is unavailable")
+    return service
+
+
+def _template_blueprint(template: dict[str, object], name: str) -> TemplateBlueprint:
+    """Translate the frontend template payload into a provisioning blueprint."""
+    screens = template.get("screens")
+    screen_list = (
+        [dict(screen) for screen in screens if isinstance(screen, dict)]
+        if isinstance(screens, list)
+        else []
+    )
+    databases: list[TemplateDatabase] = []
+    data = template.get("data")
+    if isinstance(data, dict):
+        raw_collections = data.get("collections")
+        collections: list[TemplateCollection] = []
+        if isinstance(raw_collections, list):
+            for raw in raw_collections:
+                if not isinstance(raw, dict):
+                    continue
+                raw_fields = raw.get("fields")
+                raw_records = raw.get("records")
+                identifier = raw.get("identifier")
+                collections.append(
+                    TemplateCollection(
+                        name=str(raw.get("name", "")),
+                        reference_id=str(raw.get("referenceId", "")),
+                        fields=(
+                            [dict(field) for field in raw_fields if isinstance(field, dict)]
+                            if isinstance(raw_fields, list)
+                            else []
+                        ),
+                        records=(
+                            [dict(record) for record in raw_records if isinstance(record, dict)]
+                            if isinstance(raw_records, list)
+                            else []
+                        ),
+                        identifier=dict(identifier) if isinstance(identifier, dict) else None,
+                    )
+                )
+        db_name = data.get("databaseName")
+        databases.append(
+            TemplateDatabase(
+                name=(
+                    str(db_name)
+                    if isinstance(db_name, str) and db_name.strip()
+                    else "Project database"
+                ),
+                collections=collections,
+            )
+        )
+    project_type = template.get("projectType")
+    return TemplateBlueprint(
+        name=name,
+        project_type=(
+            project_type
+            if isinstance(project_type, str) and project_type in {"app", "website"}
+            else "app"
+        ),
+        screens=screen_list,
+        databases=databases,
+    )
+
+
 def _owner_id(request: Request) -> str:
     # In production this comes from the authenticated builder session.
     # For now, derive from a header or session credential.
@@ -76,6 +151,8 @@ def _translate(exc: Exception) -> ApiError:
         return api_error(400, "validation_error", "Invalid project data")
     if isinstance(exc, ProjectStoreError):
         return api_error(503, "store_unavailable", "Project storage is unavailable")
+    if isinstance(exc, TemplateProvisioningError):
+        return api_error(400, "validation_error", "Invalid template blueprint")
     if isinstance(exc, ValueError):
         return api_error(400, "validation_error", "Invalid input")
     return api_error(500, "project_error", "Project operation failed")
@@ -126,15 +203,18 @@ async def list_projects(request: Request) -> ProjectListResponse:
 async def create_project(payload: CreateProjectRequest, request: Request) -> ProjectResponse:
     service = _project_service(request)
     owner_id = _owner_id(request)
+    if payload.template is not None:
+        provisioning = _template_provisioning_service(request)
+        blueprint = _template_blueprint(payload.template, payload.name)
+        try:
+            project_id = await provisioning.provision(owner_id, blueprint)
+            result = await service.get_project(project_id, owner_id)
+        except Exception as exc:
+            raise _translate(exc) from None
+        return _to_response(result)
+
     draft_content: dict[str, object] = {}
     project_type = "app"
-    if payload.template is not None:
-        template = payload.template
-        if isinstance(template.get("screens"), list):
-            draft_content = {"screens": template["screens"]}
-        pt = template.get("projectType")
-        if isinstance(pt, str):
-            project_type = pt
     try:
         result = await service.create_project(
             CreateProjectInput(

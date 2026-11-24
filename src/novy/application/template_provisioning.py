@@ -26,8 +26,11 @@ class TemplateCollection:
     """A collection in a template blueprint."""
 
     name: str
+    # Alias used by the project draft before fresh IDs are allocated.
+    reference_id: str = ""
     fields: list[dict[str, Any]] = field(default_factory=list)
     records: list[dict[str, Any]] = field(default_factory=list)
+    identifier: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,12 +67,18 @@ class TemplateProvisioningService:
             raise TemplateProvisioningError("Template name is required")
         if blueprint.project_type not in ("app", "website"):
             raise TemplateProvisioningError("Invalid project type")
+        seen_references: set[str] = set()
         for db in blueprint.databases:
             if not db.name or not db.name.strip():
                 raise TemplateProvisioningError("Database name is required")
             for coll in db.collections:
                 if not coll.name or not coll.name.strip():
                     raise TemplateProvisioningError("Collection name is required")
+                if not coll.reference_id.strip():
+                    raise TemplateProvisioningError("Collection reference id is required")
+                if coll.reference_id in seen_references:
+                    raise TemplateProvisioningError("Duplicate collection reference id")
+                seen_references.add(coll.reference_id)
 
     async def provision(self, owner_id: str, blueprint: TemplateBlueprint) -> str:
         self.validate_blueprint(blueprint)

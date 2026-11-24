@@ -20,6 +20,7 @@ from novy.application.template_provisioning import (
 )
 from novy.domain.projects import ProjectDraft
 from novy.infrastructure.projects import PROJECTS_COLLECTION
+from novy.infrastructure.reference_remap import remap_draft_references
 
 
 def _now() -> datetime:
@@ -40,7 +41,18 @@ class MongoTemplateProvisioningStore:
             async with await session.start_transaction():
                 project_id = ObjectId()
                 now = _now()
-                draft = ProjectDraft(content={"screens": list(blueprint.screens)})
+                # Allocate collection IDs before storing the draft so every
+                # template alias in screens can be remapped in the same draft.
+                coll_id_map = {
+                    coll.reference_id: str(ObjectId())
+                    for db_spec in blueprint.databases
+                    for coll in db_spec.collections
+                }
+                draft = ProjectDraft(
+                    content=remap_draft_references(
+                        {"screens": list(blueprint.screens)}, {}, coll_id_map
+                    )
+                )
                 project_doc = {
                     "_id": project_id,
                     "owner_id": owner_id,
@@ -68,8 +80,14 @@ class MongoTemplateProvisioningStore:
                     db_id = str(db_doc["_id"])
 
                     for coll_spec in db_spec.collections:
+                        coll_id = coll_id_map[coll_spec.reference_id]
+                        identifier_key = (
+                            coll_spec.identifier.get("key")
+                            if isinstance(coll_spec.identifier, dict)
+                            else None
+                        )
                         coll_doc = {
-                            "_id": ObjectId(),
+                            "_id": ObjectId(coll_id),
                             "project_id": str(project_id),
                             "database_id": db_id,
                             "name": coll_spec.name,
@@ -77,8 +95,9 @@ class MongoTemplateProvisioningStore:
                             "created_at": now,
                             "updated_at": now,
                         }
+                        if isinstance(identifier_key, str) and identifier_key:
+                            coll_doc["record_identifier"] = identifier_key
                         await self._db["app_collections"].insert_one(coll_doc, session=session)
-                        coll_id = str(coll_doc["_id"])
 
                         for record_spec in coll_spec.records:
                             record_doc = {

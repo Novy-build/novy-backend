@@ -8,7 +8,12 @@ from novy.application.builder_auth import BuilderAuthService
 from novy.application.builder_sessions import BuilderSessionService
 from novy.application.import_project import ImportService
 from novy.application.projects import ProjectService
+from novy.application.react_export import (
+    EXPORT_RATE_LIMIT_OPERATION,
+    ReactExportService,
+)
 from novy.application.snapshots import SnapshotService
+from novy.application.template_provisioning import TemplateProvisioningService
 from novy.infrastructure.app_data import (
     APP_COLLECTIONS_COLLECTION,
     APP_DATABASES_COLLECTION,
@@ -32,6 +37,9 @@ from novy.infrastructure.projects import (
     PROJECTS_COLLECTION,
     MongoProjectRepository,
 )
+from novy.infrastructure.rate_limit import RateLimiter
+from novy.infrastructure.react_source.generator import ReactSourceGenerator
+from novy.infrastructure.react_source.zip_archive import ZipArchiveWriter
 from novy.infrastructure.session_security import SessionSecurity
 from novy.infrastructure.settings import Settings, decode_session_key
 from novy.infrastructure.snapshots import (
@@ -40,6 +48,7 @@ from novy.infrastructure.snapshots import (
 )
 from novy.infrastructure.supabase_auth import SupabaseAuthClient
 from novy.infrastructure.supabase_jwt import SupabaseJwtValidator
+from novy.infrastructure.template_provisioning import MongoTemplateProvisioningStore
 
 
 def create_builder_session_service(
@@ -86,6 +95,14 @@ def create_project_service(database: AsyncDatabase[dict[str, Any]]) -> ProjectSe
     )
 
 
+def create_template_provisioning_service(
+    database: AsyncDatabase[dict[str, Any]],
+) -> TemplateProvisioningService | None:
+    if database is None:
+        return None
+    return TemplateProvisioningService(MongoTemplateProvisioningStore(database))
+
+
 def create_import_service(database: AsyncDatabase[dict[str, Any]]) -> ImportService | None:
     if database is None:
         return None
@@ -97,6 +114,19 @@ def create_snapshot_service(database: AsyncDatabase[dict[str, Any]]) -> Snapshot
         return None
     return SnapshotService(
         MongoSnapshotRepository(database[SNAPSHOTS_COLLECTION]),
+    )
+
+
+def create_react_export_service(
+    projects: ProjectService | None,
+) -> ReactExportService:
+    limiter = RateLimiter()
+    limiter.configure(EXPORT_RATE_LIMIT_OPERATION, capacity=5, refill_rate=1 / 60)
+    return ReactExportService(
+        projects=projects,
+        generator=ReactSourceGenerator(),
+        archives=ZipArchiveWriter(),
+        rate_limiter=limiter,
     )
 
 
